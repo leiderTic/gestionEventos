@@ -1,0 +1,57 @@
+### Obtener todas las cotizaciones
+GET http://localhost:8081/api/cotizaciones
+Authorization: Bearer {{token}}
+
+### Crear una cotización completa
+POST http://localhost:8081/api/cotizaciones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "descripcion": "Evento Cumpleaños Juan",
+    "fecha_ini": "2026-10-10",
+    "fecha_fin": "2026-10-12",
+    "evento_id": 1,
+    "clientes": [
+        {"id": 1}
+    ],
+    "tarifas": [
+        {
+            "id": 1,
+            "dias": 2,
+            "precio_aplicado": 10000.00
+        }
+    ],
+    "servicios": [
+        {
+            "id": 1,
+            "cantidad": 1,
+            "precio_aplicado": 750.00
+        }
+    ]
+}
+
+### Obtener una cotización específica
+GET http://localhost:8081/api/cotizaciones/1
+Authorization: Bearer {{token}}
+
+### Eliminar una cotización
+DELETE http://localhost:8081/api/cotizaciones/1
+Authorization: Bearer {{token}}
+
+### Preview PDF de Cotización (Simulado)
+POST http://localhost:8081/api/cotizaciones/preview
+Authorization: Bearer 2|9aZWrr4Ev0AMt89mxbWO69XFS2x5fJ7ffISDTjn726e3114a
+Content-Type: application/json
+
+{
+    "descripcion": "Preview de Evento Corporativo",
+    "fecha_ini": "2026-12-01",
+    "fecha_fin": "2026-12-05",
+    "tarifas": [
+        { "id": 1, "dias": 4, "precio_aplicado": 5000.00 }
+    ],
+    "servicios": [
+        { "id": 1, "cantidad": 10, "precio_aplicado": 15.00 }
+    ]
+}

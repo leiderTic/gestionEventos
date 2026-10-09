@@ -1,0 +1,57 @@
+### Obtener todas las tarifas
+GET http://localhost:8081/api/tarifas
+Authorization: Bearer 3|pbvTvAmasczw5FJaBJpUCaas3pYyKbRh33GSamG0be19106a
+
+### Crear una tarifa
+POST http://localhost:8081/api/tarifas
+Authorization: Bearer 8|cEKJw7uZYbRWRfRaiPNJZ92bDtMuWUnaTJKG94Ft9dfa11c2
+Content-Type: application/json
+Accept: application/json
+
+{
+    "precio_dia": 15000.50,
+    "tipo_tarifa_id": 1,
+    "espacio_id": 1
+}
+
+### Obtener tarifas por espacio específico (todas)
+GET http://localhost:8081/api/tarifas/espacio/1
+Authorization: Bearer 3|0swGaL7rJ1BpACOd3ZZmJDLvVJSW1OAwbFjgu63x9ceca88c
+
+### Obtener tarifas por espacio específico (solo Temporada Baja)
+GET http://localhost:8081/api/tarifas/espacio/1/temporada/1
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer 2|9aZWrr4Ev0AMt89mxbWO69XFS2x5fJ7ffISDTjn726e3114a
+
+### Obtener tarifas por espacio específico (solo Temporada Alta)
+GET http://localhost:8081/api/tarifas/espacio/1/temporada/2/tipo/2
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer 2|9aZWrr4Ev0AMt89mxbWO69XFS2x5fJ7ffISDTjn726e3114a
+
+### Obtener tarifa por Espacio, Temporada y Tipo específico
+GET http://localhost:8081/api/tarifas/espacio/1/temporada/1/tipo/2
+Authorization: Bearer 2|9aZWrr4Ev0AMt89mxbWO69XFS2x5fJ7ffISDTjn726e3114a
+
+
+### Obtener una tarifa específica
+GET http://localhost:8081/api/tarifas/1
+Content-Type: application/json
+Accept: application/json
+Authorization: 8|cEKJw7uZYbRWRfRaiPNJZ92bDtMuWUnaTJKG94Ft9dfa11c2
+
+### Actualizar una tarifa
+PUT http://localhost:8081/api/tarifas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "precio_dia": 16000.00,
+    "tipo_tarifa_id": 1,
+    "espacio_id": 1
+}
+
+### Eliminar una tarifa
+DELETE http://localhost:8081/api/tarifas/1
+Authorization: Bearer {{token}}
