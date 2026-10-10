@@ -79,7 +79,7 @@ router.beforeEach((to, from) => {
     }
 
     if (to.meta.requiresIfAuth && token) {
-        return { name: 'usuario' }
+        return { name: 'dashboard' }
     }
 
     return true

@@ -30,18 +30,18 @@ services:
       - CHOKIDAR_USEPOLLING=true # Ayuda con el hot reload en desarrollo local
 
   db:
-    image: mysql:8.4
-    container_name: gestion_mysql_db
+    image: postgres:latest
+    container_name: gestion_postgres_db
     restart: always
     environment:
-      MYSQL_DATABASE: db_events
-      MYSQL_USER: cfchm_user
-      MYSQL_PASSWORD: cfchm_password
-      MYSQL_ROOT_PASSWORD: root_password
+      POSTGRES_DB: db_events
+      POSTGRES_USER: cfchm_user
+      POSTGRES_PASSWORD: cfchm_password
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "3308:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     networks:
       - eventos-net
 

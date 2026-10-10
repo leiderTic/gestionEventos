@@ -41,7 +41,7 @@
 
                     <!-- STEPPER HORIZONTAL -->
                     <div class="flex items-center gap-2 overflow-x-auto pb-4 hide-scrollbar mb-6">
-                        <div v-for="(step, index) in stepsBase" :key="index">
+                        <template v-for="(step, index) in stepsBase" :key="index">
                             <div class="flex items-center flex-shrink-0">
                                 <div @click="step.id === cotizacion.paso ? drawerVisible = true : null" :class="[
                                     'px-4 py-1.5 rounded text-xs border whitespace-nowrap text-center transition-all',

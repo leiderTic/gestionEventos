@@ -9,13 +9,14 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    libzip-dev
+    libzip-dev \
+    libpq-dev
 
 # Limpiar caché
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensiones de PHP necesarias para Laravel
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+# Instalar extensiones de PHP necesarias para Laravel y PostgreSQL
+RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd zip
 
 # Habilitar el módulo rewrite de Apache
 RUN a2enmod rewrite
