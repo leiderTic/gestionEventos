@@ -1137,8 +1137,9 @@
                         <div class="flex flex-col gap-2">
                             <label
                                 class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase tracking-widest text-[#06352c] dark:text-primary-400">Modalidad</label>
-                            <Select v-model="formReserva.reunion_modalidad" :options="modalidadesReserva"
-                                optionLabel="label" optionValue="value" placeholder="Modalidad..." class="w-full" />
+                            <Select v-model="formReserva.modalidad_id" :options="modalidades"
+                                optionLabel="descripcion" optionValue="id" placeholder="Seleccionar modalidad..." class="w-full"
+                                :class="{ 'p-invalid': submittedReserva && !formReserva.modalidad_id }" />
                         </div>
                     </div>
 
@@ -1208,6 +1209,8 @@ import Image from 'primevue/image';
 import cotizacionServices from '@/services/cotizacion.services';
 import bancoServices from '@/services/banco.services';
 import tiporespaldoServices from '@/services/tiporespaldo.services';
+import modalidadServices from '@/services/modalidad.services';
+import reunionServices from '@/services/reunion.services';
 import pagoServices from '@/services/pago.services';
 import eventoServices from '@/services/evento.services';
 import espacioServices from '@/services/espacio.services';
@@ -1248,6 +1251,7 @@ const savingReserva = ref(false);
 
 const bancos = ref([]);
 const tiposRespaldo = ref([]);
+const modalidades = ref([]);
 const boucherPreviewUrl = ref(null);
 const verificacionMensaje = ref('');
 const verificacionEstado = ref(null); // 'success', 'error', null
@@ -1262,50 +1266,39 @@ const formReserva = reactive({
     monto_deposito: 0,
     reunion_fecha: null,
     reunion_hora: '10:00',
-    reunion_modalidad: 'Presencial',
+    modalidad_id: null,
     observaciones_reunion: ''
 });
 
 const loadCatalogosReserva = async () => {
     try {
-        const [resBancos, resTipos] = await Promise.all([
+        const [resBancos, resTipos, resModalidades] = await Promise.all([
             bancoServices.listar(),
-            tiporespaldoServices.listar()
+            tiporespaldoServices.listar(),
+            modalidadServices.listar()
         ]);
         bancos.value = resBancos.data?.data || resBancos.data || [];
         tiposRespaldo.value = resTipos.data?.data || resTipos.data || [];
+        modalidades.value = resModalidades.data?.data || resModalidades.data || [];
     } catch (e) {
         console.error('Error al cargar catálogos:', e);
     }
 };
 
-const modalidadesReserva = [
-    { label: 'Presencial', value: 'Presencial' },
-    { label: 'Virtual (Zoom/Meet)', value: 'Virtual' },
-    { label: 'Llamada Telefónica', value: 'Llamada' }
-];
-
-const respaldosOptions = [
-    { label: 'Carta de Solicitud', value: 'Carta' },
-    { label: 'Correo Electrónico', value: 'Email' },
-    { label: 'WhatsApp / Mensaje', value: 'WhatsApp' },
-    { label: 'Formulario de Reserva', value: 'Formulario' }
-];
-
 const abrirModalReserva = () => {
     if (!cotizacion.value) return;
 
     // Resetear form
-    formReserva.tipo_respaldo = null;
+    formReserva.tipo_respaldo_id = tiposRespaldo.value.length > 0 ? tiposRespaldo.value[0].id : null;
     formReserva.archivo_respaldo = null;
-    formReserva.boucher_imagen = null;
+    formReserva.archivo_boucher = null;
     formReserva.nro_comprobante = '';
-    formReserva.banco = null;
+    formReserva.banco_id = bancos.value.length > 0 ? bancos.value[0].id : null;
     formReserva.fecha_deposito = new Date();
     formReserva.monto_deposito = Number(((cotizacion.value?.monto_total || 0) * 0.2).toFixed(2));
-    formReserva.reunion_fecha = cotizacion.value.fecha_ini ? new Date(cotizacion.value.fecha_ini) : null;
+    formReserva.reunion_fecha = cotizacion.value.fecha_ini ? new Date(cotizacion.value.fecha_ini) : new Date();
     formReserva.reunion_hora = '10:00';
-    formReserva.reunion_modalidad = 'Presencial';
+    formReserva.modalidad_id = modalidades.value.length > 0 ? modalidades.value[0].id : null;
     formReserva.observaciones_reunion = '';
 
     submittedReserva.value = false;
@@ -1328,41 +1321,59 @@ const onFileSelect = (event, field) => {
 const confirmarReserva = async () => {
     submittedReserva.value = true;
 
-    // Validaciones básicas
+    // Validaciones básicas requeridas por reglamento
     if (!formReserva.tipo_respaldo_id || !formReserva.archivo_respaldo ||
-        !formReserva.archivo_boucher || !formReserva.nro_comprobante || !formReserva.banco_id) {
-        toast.add({ severity: 'warn', summary: 'Atención', detail: 'Por favor complete todos los campos obligatorios y adjunte los archivos.', life: 3000 });
+        !formReserva.archivo_boucher || !formReserva.nro_comprobante || !formReserva.banco_id ||
+        !formReserva.reunion_fecha || !formReserva.modalidad_id) {
+        toast.add({ severity: 'warn', summary: 'Atención', detail: 'Por favor complete todos los campos obligatorios (respaldo, comprobante y reunión operativa).', life: 4000 });
         return;
     }
 
     try {
         savingReserva.value = true;
 
-        // 1. Registrar el Pago
+        // 1. Registrar el Pago (Anticipo 20%)
         const formDataPago = new FormData();
         formDataPago.append('banco_id', formReserva.banco_id);
         formDataPago.append('nro_comprobante', formReserva.nro_comprobante);
         formDataPago.append('monto_pagado', formReserva.monto_deposito);
-        formDataPago.append('fecha_deposito', formReserva.fecha_deposito.toISOString().split('T')[0]);
+        formDataPago.append('fecha_deposito', formReserva.fecha_deposito instanceof Date ? formReserva.fecha_deposito.toISOString().split('T')[0] : formReserva.fecha_deposito);
         formDataPago.append('boucher', formReserva.archivo_boucher);
 
         await pagoServices.registrarPago(cotizacion.value.id, formDataPago);
 
-        // 2. Subir el Respaldo Legal
+        // 2. Subir el Respaldo Legal / Comercial (Art. 40)
         const formDataRespaldo = new FormData();
         formDataRespaldo.append('id_tipo_respaldo', formReserva.tipo_respaldo_id);
         formDataRespaldo.append('archivo', formReserva.archivo_respaldo);
 
         await cotizacionServices.subirRespaldo(cotizacion.value.id, formDataRespaldo);
 
-        // 3. Actualizar estado de la cotización (Backend debería hacerlo, pero refrescamos)
+        // 3. Registrar Reunión Operativa (Art. 41)
+        const fechaReunion = formReserva.reunion_fecha instanceof Date
+            ? formReserva.reunion_fecha.toISOString().split('T')[0]
+            : formReserva.reunion_fecha;
+
+        await reunionServices.guardar(cotizacion.value.id, {
+            fecha: fechaReunion,
+            hora: formReserva.reunion_hora || '10:00',
+            modalidad_id: formReserva.modalidad_id,
+            observaciones: formReserva.observaciones_reunion || ''
+        });
+
+        // 4. Avanzar el expediente a Paso 2 (Confirmación de Reserva)
+        await cotizacionServices.actualizar(cotizacion.value.id, {
+            paso: 2
+        });
+
+        // 5. Refrescar expediente completo
         await fetchCotizacion();
 
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Reserva confirmada y archivos registrados correctamente.', life: 3000 });
+        toast.add({ severity: 'success', summary: '¡Reserva Confirmada!', detail: 'Respaldo, pago del 20% y reunión operativa registrados con éxito. Expediente avanzado al Paso 2.', life: 4000 });
         showModalReserva.value = false;
     } catch (e) {
         console.error(e);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo completar el registro de reserva.', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo completar el registro de reserva. Verifique los datos.', life: 3000 });
     } finally {
         savingReserva.value = false;
     }

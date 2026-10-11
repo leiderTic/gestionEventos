@@ -11,20 +11,38 @@ class MasterDataSeeder extends Seeder
 {
     public function run(): void
     {
-        // Bancos
-        $bancos = ['Banco Unión', 'BNB', 'Banco Sol', 'Banco Mercantil Santa Cruz'];
+        // Bancos de Bolivia
+        $bancos = [
+            'Banco Unión S.A.',
+            'Banco Nacional de Bolivia (BNB)',
+            'Banco Mercantil Santa Cruz',
+            'Banco de Crédito de Bolivia (BCP)',
+            'Banco Bisa',
+            'BancoSol',
+            'Banco Ganadero',
+            'Banco Económico',
+            'Banco FIE',
+            'Banco Prodem',
+            'Banco de Desarrollo Productivo (BDP)',
+            'Banco PyME Los Andes Procredit',
+            'Banco Fortaleza',
+            'Banco Regional del Oriente',
+        ];
         foreach ($bancos as $banco) {
-            Banco::create(['nombre' => $banco]);
+            Banco::updateOrCreate(['nombre' => $banco]);
         }
 
         // Tipo de Respaldos
         $tipos = [
-            'Aceptación por Correo',
-            'Carta de Compromiso',
-            'Contrato Digital Firmado'
+            'Correo electrónico',
+            'Carta institucional',
+            'WhatsApp',
+            'Orden de Compra',
+            'Acta de reunión',
+            'Otro documento',
         ];
         foreach ($tipos as $tipo) {
-            TipoRespaldo::create(['descripcion' => $tipo]);
+            TipoRespaldo::updateOrCreate(['descripcion' => $tipo]);
         }
 
         // Porcentajes
@@ -34,7 +52,7 @@ class MasterDataSeeder extends Seeder
             ['descripcion' => 'Pago Total', 'porcentaje' => 100],
         ];
         foreach ($porcentajes as $p) {
-            Porcentaje::create($p);
+            Porcentaje::updateOrCreate(['descripcion' => $p['descripcion']], $p);
         }
     }
 }

@@ -10,14 +10,24 @@ class CrmReunionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Modalidades de Reunión
-        $modalidades = ['Presencial', 'Virtual'];
+        // Modalidades de Reunión (Art. 41)
+        $modalidades = [
+            'Presencial',
+            'Virtual (Zoom / Meet / Teams)',
+            'Llamada telefónica'
+        ];
         foreach ($modalidades as $m) {
             Modalidad::updateOrCreate(['descripcion' => $m]);
         }
 
-        // Tipos de CRM / Seguimiento
-        $tipos = ['Llamada', 'Reunión', 'Correo', 'WhatsApp'];
+        // Tipos de CRM / Seguimiento Comercial
+        $tipos = [
+            'Llamada',
+            'Reunión',
+            'Correo electrónico',
+            'WhatsApp',
+            'Visita guiada'
+        ];
         foreach ($tipos as $t) {
             TipoCrm::updateOrCreate(['descripcion' => $t]);
         }
