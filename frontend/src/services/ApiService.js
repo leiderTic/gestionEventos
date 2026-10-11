@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const url_base = import.meta.env.VITE_API_URL || 'http://localhost:8081/api';
+const defaultUrl = typeof window !== 'undefined' && window.location ? `http://${window.location.hostname}:8081/api` : 'http://localhost:8081/api';
+const url_base = import.meta.env.VITE_API_URL || defaultUrl;
 export function Api() {
     let token = localStorage.getItem('access_token');
     const api = axios.create({
