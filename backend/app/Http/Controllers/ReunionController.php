@@ -65,7 +65,7 @@ class ReunionController extends Controller
         ]);
 
         if ($request->hasFile('acta')) {
-            $path = $request->file('acta')->store('reuniones/actas', 'public');
+            $path = $request->file('acta')->store("expedientes/{$reunion->cotizacion_id}/reuniones", 'public');
             
             $acta = Acta::updateOrCreate(
                 ['reunion_id' => $reunion->id],

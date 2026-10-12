@@ -29,5 +29,11 @@ export default {
     },
     getRespaldos: (id) => {
         return Api().get(`cotizaciones/${id}/respaldos`);
+    },
+    getFichaReservaPdf: (id) => {
+        return Api().get(`cotizaciones/${id}/ficha-reserva-pdf`, { responseType: 'blob' });
+    },
+    confirmarReserva: (id, datos = {}) => {
+        return Api().post(`cotizaciones/${id}/confirmar-reserva`, datos);
     }
 };

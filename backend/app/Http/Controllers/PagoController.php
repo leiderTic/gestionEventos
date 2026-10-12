@@ -39,7 +39,7 @@ class PagoController extends Controller
         }
 
         return DB::transaction(function () use ($request, $cotizacion) {
-            $path = $request->file('boucher')->store('pagos', 'public');
+            $path = $request->file('boucher')->store("expedientes/{$cotizacion->id}/pagos", 'public');
 
             $pago = Pago::create([
                 'monto_pagado' => $request->monto_pagado,

@@ -31,11 +31,15 @@
                                 {{ getContactoTelefono() }}</p>
                         </div>
                         <div class="text-right flex flex-col items-end">
-                            <span
+                            <span v-if="cotizacion.paso >= 2"
+                                class="border border-[#d8b4fe] text-[#6b21a8] bg-[#f3e8ff] dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800 px-3.5 py-1 rounded-full text-xs font-bold shadow-sm">
+                                Confirmación de Reserva
+                            </span>
+                            <span v-else
                                 class="border border-blue-200 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
                                 {{ getEstadoLabel(cotizacion.paso) }}
                             </span>
-                            <p class="text-xs text-surface-400 mt-2">Por {{ cotizacion.user?.name || 'Sistema' }}</p>
+                            <p class="text-xs text-surface-400 mt-1.5">Por {{ cotizacion.user?.name || 'Sistema' }}</p>
                         </div>
                     </div>
 
@@ -44,24 +48,19 @@
                         <template v-for="(step, index) in stepsBase" :key="index">
                             <div class="flex items-center flex-shrink-0">
                                 <div @click="step.id === cotizacion.paso ? drawerVisible = true : null" :class="[
-                                    'px-4 py-1.5 rounded text-xs border whitespace-nowrap text-center transition-all',
+                                    'px-3 py-1 rounded text-xs border whitespace-nowrap text-center transition-all flex items-center gap-1',
                                     step.id === cotizacion.paso
-                                        ? 'bg-red-500 text-white border-red-500 font-bold cursor-pointer shadow-md hover:bg-red-600 hover:shadow-lg'
+                                        ? 'bg-red-600 text-white border-red-600 font-bold cursor-pointer shadow-sm hover:bg-red-700'
                                         : step.id < cotizacion.paso
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-300 dark:border-green-800/50 font-medium cursor-default'
-                                            : 'bg-surface-50 dark:bg-surface-800 text-surface-400 dark:text-surface-500 border-surface-200 dark:border-surface-700 opacity-50 cursor-default'
-                                ]" :title="step.id === cotizacion.paso ? 'Ver detalles del paso actual' : step.label">
-                                    <template v-if="step.id < cotizacion.paso">
-                                        <i
-                                            class="pi pi-check-circle text-green-600 dark:text-green-400 mr-1 text-[10px]"></i>
-                                    </template>
-                                    {{ step.short || step.label }}
-                                    <i v-if="step.id === cotizacion.paso"
-                                        class="pi pi-caret-right text-[10px] ml-1"></i>
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 font-medium cursor-default'
+                                            : 'bg-surface-50 dark:bg-surface-800 text-surface-400 dark:text-surface-500 border-surface-200 dark:border-surface-700 opacity-60 cursor-default'
+                                ]" :title="step.label">
+                                    <span>{{ step.label }}</span>
+                                    <span v-if="step.id <= cotizacion.paso" class="text-[10px] font-bold">›</span>
                                 </div>
                             </div>
                             <div v-if="index < stepsBase.length - 1"
-                                class="w-4 border-t border-dashed border-surface-300 dark:border-surface-700 flex-shrink-0">
+                                class="w-3 border-t border-dashed border-surface-300 dark:border-surface-700 flex-shrink-0">
                             </div>
                         </template>
                     </div>
@@ -153,13 +152,71 @@
 
                     <!-- BANNER TOTAL -->
                     <div
-                        class="bg-primary-900 dark:bg-primary-800 text-primary-contrast py-4 px-6 flex justify-between items-center rounded-lg mt-8 shadow-lg">
+                        class="bg-[#06352c] dark:bg-surface-950 text-white py-3.5 px-6 flex justify-between items-center rounded-lg mt-6 shadow-md">
                         <span class="text-sm font-bold uppercase tracking-wider">TOTAL COTIZACIÓN</span>
                         <span class="text-xl font-black">Bs {{ formatCurrency(cotizacion.monto_total) }}</span>
                     </div>
 
+                    <!-- ESTADO DE PAGOS (Activo en paso >= 2 o con pagos registrados) -->
+                    <div v-if="cotizacion.paso >= 2 || (cotizacion.pagos && cotizacion.pagos.length > 0)"
+                        class="border-2 border-emerald-400 bg-emerald-50/20 dark:bg-emerald-950/20 rounded-xl p-5 mt-6 text-left shadow-sm">
+                        <div class="flex items-center gap-2 text-xs font-black text-emerald-700 dark:text-emerald-400 mb-3 tracking-wide">
+                            <i class="pi pi-credit-card text-emerald-600"></i>
+                            <span>ESTADO DE PAGOS</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                            <!-- Columna 1: ANTICIPO PAGADO -->
+                            <div>
+                                <p class="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-tight m-0">ANTICIPO PAGADO</p>
+                                <p class="text-lg font-black text-emerald-600 dark:text-emerald-400 m-0 leading-tight mt-1">
+                                    Bs {{ formatCurrency(pagoAnticipoMonto) }}
+                                </p>
+                                <p class="text-[11px] text-surface-500 dark:text-surface-400 m-0 mt-0.5">
+                                    {{ pagoAnticipoFecha }}
+                                </p>
+                            </div>
+                            <!-- Columna 2: SALDO PENDIENTE -->
+                            <div>
+                                <p class="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-tight m-0">SALDO PENDIENTE</p>
+                                <p class="text-lg font-black text-red-500 dark:text-red-400 m-0 leading-tight mt-1">
+                                    Bs {{ formatCurrency(saldoPendienteMonto) }}
+                                </p>
+                                <p class="text-[11px] text-surface-500 dark:text-surface-400 m-0 mt-0.5">
+                                    Límite {{ fechaLimitePagoStr }}
+                                </p>
+                            </div>
+                            <!-- Columna 3: GARANTÍA PENDIENTE -->
+                            <div>
+                                <p class="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-tight m-0">GARANTÍA PENDIENTE</p>
+                                <p class="text-lg font-black text-amber-500 dark:text-amber-400 m-0 leading-tight mt-1">
+                                    Bs {{ formatCurrency(garantiaPendienteMonto) }}
+                                </p>
+                                <p class="text-[11px] text-surface-500 dark:text-surface-400 m-0 mt-0.5">
+                                    Límite {{ fechaLimitePagoStr }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- BOTONERAS DE ACCIÓN -->
-                    <div class="mt-6 flex flex-col gap-3">
+                    <div v-if="cotizacion.paso >= 2" class="mt-6 flex flex-col gap-3">
+                        <Button label="Reimprimir" icon="pi pi-print" severity="secondary" outlined
+                            class="w-full font-bold shadow-sm !py-2.5 !bg-white hover:!bg-surface-50 dark:!bg-surface-800"
+                            @click="reimprimirCotizacion" :loading="printing" />
+
+                        <button type="button" @click="abrirFichaReserva"
+                            class="w-full bg-[#581c87] hover:bg-[#4a148c] text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+                            <i class="pi pi-id-card text-sm"></i>
+                            <span>Ficha de Reserva</span>
+                        </button>
+
+                        <button type="button" @click="showModalActaReunion = true"
+                            class="w-full bg-[#581c87] hover:bg-[#4a148c] text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+                            <i class="pi pi-clipboard text-sm"></i>
+                            <span>Acta Reunión Operativa</span>
+                        </button>
+                    </div>
+                    <div v-else class="mt-6 flex flex-col gap-3">
                         <Button label="Reimprimir" icon="pi pi-print" severity="secondary" outlined
                             class="w-full font-bold shadow-sm" @click="reimprimirCotizacion" :loading="printing" />
                         <Button label="Gestionar Cotización" icon="pi pi-pencil" severity="warning"
@@ -287,62 +344,62 @@
                 <div
                     class="bg-white dark:bg-surface-900 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700 p-5 sticky top-24">
                     <h3
-                        class="text-lg font-black text-surface-800 dark:text-surface-0 mb-4 flex items-center gap-2 m-0 tracking-tight leading-none uppercase">
-                        <i class="pi pi-sort-alt text-surface-600 dark:text-surface-400"></i> FLUJO DE APROBACIÓN
+                        class="text-base font-black text-surface-800 dark:text-surface-0 mb-4 flex items-center gap-2 m-0 tracking-tight leading-none">
+                        <i class="pi pi-list-check text-emerald-700 dark:text-emerald-400"></i> Flujo de Aprobación
                     </h3>
 
-                    <div class="space-y-2">
-                        <div v-for="step in approvalSteps" :key="step.id" :class="[
-                            'rounded-xl border p-4 flex gap-4 items-center relative transition-all',
-                            step.status === 'completed' ? 'bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 shadow-sm' : (step.status === 'current' ? 'bg-surface-0 dark:bg-surface-800 border-yellow-500 shadow-md' : 'bg-white dark:bg-surface-950 border-surface-100 dark:border-surface-800 opacity-50')
+                    <div class="space-y-3">
+                        <div v-for="step in approvalCards" :key="step.id" :class="[
+                            'rounded-xl border p-3 flex gap-3 items-center relative transition-all',
+                            step.status === 'completed'
+                                ? 'bg-[#f0fdf4] dark:bg-emerald-950/20 border-[#86efac] dark:border-emerald-800/60 shadow-sm'
+                                : (step.status === 'current'
+                                    ? 'bg-[#fffbeb] dark:bg-amber-950/20 border-[#fcd34d] dark:border-amber-700/60 shadow-md'
+                                    : 'bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 opacity-60')
                         ]">
 
                             <!-- Icono Izquierdo Base -->
-                            <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center border transition-colors"
-                                :class="[
-                                    step.status === 'current' ? 'bg-white dark:bg-surface-900 text-blue-600 dark:text-blue-400 border-surface-200 dark:border-surface-700 shadow-sm' : (step.status === 'completed' ? 'bg-surface-50 dark:bg-surface-800 text-surface-400 border-surface-200 dark:border-surface-800' : 'bg-surface-50 dark:bg-surface-900 text-surface-300 border-surface-100 dark:border-surface-800')
-                                ]">
-                                <i
-                                    :class="[step.status === 'completed' ? 'pi pi-check text-green-600 dark:text-green-400 font-bold' : step.icon, 'text-sm']"></i>
+                            <div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors"
+                                :class="step.iconBgClass">
+                                <i :class="[step.icon, 'text-sm']"></i>
                             </div>
 
                             <!-- Contenido Central -->
-                            <div class="flex-grow min-w-0" style="line-height: 1">
-                                <div class="flex items-center gap-2 !m-0 !p-0">
-                                    <p
-                                        class="font-bold text-surface-900 dark:text-surface-0 text-sm !m-0 !p-0 truncate leading-tight">
-                                        {{
-                                            step.label }}
+                            <div class="flex-grow min-w-0 text-left">
+                                <div class="flex items-center gap-1.5 !m-0 !p-0">
+                                    <p class="font-bold text-surface-900 dark:text-surface-0 text-xs !m-0 !p-0 truncate leading-tight">
+                                        {{ step.title }}
                                     </p>
-                                    <span
-                                        class="text-[10px] text-surface-400 dark:text-surface-500 hover:text-primary cursor-pointer whitespace-nowrap">▶
-                                        Ver</span>
+                                    <span v-if="step.canView" @click="step.onView()"
+                                        class="text-[10px] text-surface-400 dark:text-surface-500 hover:text-primary cursor-pointer whitespace-nowrap font-medium">
+                                        ▶ ver
+                                    </span>
                                 </div>
 
-                                <p v-if="step.status === 'current' && step.id > 1"
-                                    class="text-xs text-surface-500 dark:text-surface-400 !m-0 !p-0 leading-none mt-0.5">
-                                    Pendiente
+                                <p v-if="step.line1"
+                                    class="text-[11px] text-surface-700 dark:text-surface-300 font-medium !m-0 !p-0 truncate leading-tight mt-1">
+                                    {{ step.line1 }}
                                 </p>
-                                <p v-if="step.id === 1"
-                                    class="text-[11px] text-surface-700 dark:text-surface-300 font-bold !m-0 !p-0 truncate leading-none mt-0.5">
-                                    {{
-                                        cotizacion.user?.name || 'Sistema' }}</p>
-
-                                <p
-                                    class="text-[11px] text-surface-500 dark:text-surface-400 !m-0 !p-0 truncate leading-none mt-0.5">
-                                    {{
-                                        step.desc }}</p>
+                                <p v-if="step.line2"
+                                    class="text-[10px] text-surface-500 dark:text-surface-400 !m-0 !p-0 truncate leading-tight mt-0.5">
+                                    {{ step.line2 }}
+                                </p>
                             </div>
 
                             <!-- Icono Derecho -->
                             <div class="flex-shrink-0 flex justify-center items-center w-6">
-                                <i v-if="step.status === 'current'"
-                                    class="pi pi-hourglass text-yellow-500 text-sm animate-pulse"></i>
-                                <div v-else-if="step.status === 'pending'"
-                                    class="w-3 h-3 rounded-full border-2 border-surface-300 dark:border-surface-700">
+                                <!-- Checkmark cuadrado verde -->
+                                <div v-if="step.status === 'completed'"
+                                    class="w-5 h-5 rounded bg-[#22c55e] text-white flex items-center justify-center text-[10px] font-black shadow-sm">
+                                    <i class="pi pi-check"></i>
                                 </div>
-                                <div v-else-if="step.status === 'completed'"
-                                    class="w-3 h-3 rounded-full border-2 border-surface-200"></div>
+                                <!-- Reloj de arena animado -->
+                                <i v-else-if="step.status === 'current'"
+                                    class="pi pi-hourglass text-amber-500 text-sm animate-pulse"></i>
+                                <!-- Círculo vacío -->
+                                <div v-else
+                                    class="w-3.5 h-3.5 rounded-full border-2 border-surface-300 dark:border-surface-600">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1200,6 +1257,157 @@
             </div>
         </template>
     </Dialog>
+
+    <!-- Modal Ficha de Reserva (PDF Oficial) -->
+    <Dialog v-model:visible="showModalFichaReserva" modal :showHeader="false"
+        class="!p-0 !border-none !overflow-hidden max-w-[1200px]" :style="{ width: '92vw' }"
+        :contentStyle="{ padding: '0' }">
+        <template #default>
+            <!-- Header Modal con diseño Institucional Púrpura Premium -->
+            <div class="bg-gradient-to-r from-[#2e0854] via-[#4a148c] to-[#6b21a8] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-white/10 shadow-lg">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-inner">
+                        <i class="pi pi-file-pdf text-xl text-amber-300"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-base sm:text-lg leading-tight text-white uppercase tracking-wider">
+                                Ficha de Reserva Oficial (Art. 40)
+                            </span>
+                            <span class="hidden sm:inline-flex items-center text-[10px] font-black uppercase tracking-widest bg-amber-400 text-purple-950 px-2 py-0.5 rounded-full shadow-sm">
+                                {{ cotizacion.reserva?.codigo || 'Confirmación' }}
+                            </span>
+                        </div>
+                        <span class="text-xs text-purple-200 uppercase tracking-wider mt-0.5 font-semibold flex items-center gap-1.5">
+                            <span>EXPEDIENTE: {{ cotizacion.codigo }}</span>
+                            <span class="text-purple-300/60">&bull;</span>
+                            <span class="text-white font-bold">{{ getInstitucionNombre() }}</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <Button label="Imprimir Ficha" icon="pi pi-print" severity="secondary" @click="printFichaPdf"
+                        :disabled="loadingFichaPdf || !fichaPdfUrl"
+                        class="!bg-white dark:!bg-surface-800 !text-[#4a148c] dark:!text-primary-300 !border-none !py-2 !px-4 !font-bold shadow-md hover:!bg-surface-100 transition-all text-xs" />
+                    <Button label="Descargar PDF" icon="pi pi-download" severity="warn" @click="downloadFichaPdf"
+                        :disabled="loadingFichaPdf || !fichaPdfUrl"
+                        class="!py-2 !px-4 !font-bold shadow-md hover:scale-105 active:scale-95 transition-all text-xs" />
+                    <div class="w-px h-7 bg-white/20 mx-1"></div>
+                    <Button icon="pi pi-times" text rounded @click="showModalFichaReserva = false"
+                        class="!text-white hover:bg-white/20 w-9 h-9 transition-colors" />
+                </div>
+            </div>
+
+            <!-- Visor Iframe del PDF Oficial -->
+            <div class="w-full h-[80vh] bg-surface-200 dark:bg-surface-950 overflow-hidden flex flex-col">
+                <div class="flex-1 overflow-auto p-4 md:p-6 flex justify-center bg-surface-200 dark:bg-surface-950">
+                    <iframe v-if="fichaPdfUrl" id="iframe-ficha-reserva" :src="fichaPdfUrl"
+                        class="w-full max-w-[1000px] h-full border-none shadow-2xl bg-white rounded-sm"></iframe>
+                    <div v-else class="flex-1 flex flex-col items-center justify-center gap-4 py-20">
+                        <i class="pi pi-spin pi-spinner text-5xl text-purple-600"></i>
+                        <p class="text-surface-600 dark:text-surface-400 font-medium text-base">
+                            Generando Ficha de Reserva oficial en PDF...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer Informativo -->
+                <div class="p-3 bg-surface-50 dark:bg-surface-900 border-t border-surface-200 dark:border-surface-800 text-center flex flex-col sm:flex-row items-center justify-between px-6 text-xs text-surface-500">
+                    <span>Documento normativo emitido conforme al Art. 40 del Reglamento de Uso de Bienes y Prestación de Servicios UCFCHM.</span>
+                    <span class="font-bold text-surface-700 dark:text-surface-300 mt-1 sm:mt-0">Sistema Comercial CFCHM 2026</span>
+                </div>
+            </div>
+        </template>
+    </Dialog>
+
+    <!-- Modal Acta Reunión Operativa (Art. 41) -->
+    <Dialog v-model:visible="showModalActaReunion" modal :style="{ width: '50vw', maxWidth: '700px' }"
+        :pt="{ header: { class: 'bg-[#581c87] text-white' }, closeButton: { class: 'text-white hover:bg-white/10' } }">
+        <template #header>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white">
+                    <i class="pi pi-calendar text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="m-0 text-base font-bold text-white leading-tight">Reunión Operativa (Art. 41)</h3>
+                    <p class="m-0 text-xs text-white/80 leading-none mt-1">Coordinación Técnica y Logística</p>
+                </div>
+            </div>
+        </template>
+
+        <div class="p-6 space-y-6 text-sm">
+            <!-- Datos de la Reunión Programada -->
+            <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="pi pi-clock text-amber-600 dark:text-amber-400"></i>
+                        <span class="font-bold text-amber-900 dark:text-amber-200 text-xs uppercase">Programación de Reunión</span>
+                    </div>
+                    <span class="bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                        {{ reunionData?.estado || 'Programada' }}
+                    </span>
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-left">
+                    <div>
+                        <span class="text-[11px] text-amber-800/70 dark:text-amber-400 block font-bold">FECHA</span>
+                        <span class="font-black text-surface-900 dark:text-surface-100 text-sm">{{ reunionData?.fecha || '-' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-amber-800/70 dark:text-amber-400 block font-bold">HORA</span>
+                        <span class="font-black text-surface-900 dark:text-surface-100 text-sm">{{ reunionData?.hora ? reunionData.hora.slice(0, 5) : '10:00' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-amber-800/70 dark:text-amber-400 block font-bold">MODALIDAD</span>
+                        <span class="font-black text-surface-900 dark:text-surface-100 text-sm">{{ reunionData?.modalidad?.descripcion || 'Presencial' }}</span>
+                    </div>
+                </div>
+                <div v-if="reunionData?.observaciones" class="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
+                    <span class="text-[11px] text-amber-800/70 dark:text-amber-400 block font-bold">OBSERVACIONES</span>
+                    <p class="text-xs text-surface-700 dark:text-surface-300 m-0 mt-0.5 italic">"{{ reunionData.observaciones }}"</p>
+                </div>
+            </div>
+
+            <!-- Formulario o Vista del Acta -->
+            <div v-if="reunionData?.acta" class="bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="font-bold text-surface-900 dark:text-surface-100 text-xs">Acta Firmada y Resumen</span>
+                    <span class="text-emerald-600 font-bold text-xs flex items-center gap-1">
+                        <i class="pi pi-check-circle"></i> Registrada
+                    </span>
+                </div>
+                <p v-if="reunionData.acta.resumen_acuerdos" class="text-xs text-surface-600 dark:text-surface-300 mb-4 bg-white dark:bg-surface-900 p-3 rounded border">
+                    {{ reunionData.acta.resumen_acuerdos }}
+                </p>
+                <a :href="getStorageUrl(reunionData.acta.archivo_path)" target="_blank"
+                    class="bg-[#06352c] text-white hover:bg-[#0a4a3e] py-2 px-4 rounded-lg font-bold text-xs inline-flex items-center gap-2">
+                    <i class="pi pi-download"></i>
+                    <span>Descargar Acta Adjunta</span>
+                </a>
+            </div>
+
+            <div v-else class="space-y-4">
+                <h4 class="text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wider m-0">Registrar Acta de Reunión</h4>
+                <div>
+                    <label class="block text-xs font-bold text-surface-500 uppercase mb-2">Archivo del Acta (PDF, JPG, PNG)</label>
+                    <input type="file" @change="onActaFileSelect" accept=".pdf,.jpg,.jpeg,.png"
+                        class="w-full text-xs text-surface-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-surface-500 uppercase mb-2">Resumen de Acuerdos Técnicos</label>
+                    <Textarea v-model="resumenAcuerdos" rows="3" class="w-full text-xs" placeholder="Detalle los compromisos técnicos, requerimientos de montaje o fechas límite acordadas..." />
+                </div>
+            </div>
+        </div>
+
+        <template #footer>
+            <div class="flex justify-end gap-2">
+                <Button label="Cerrar" severity="secondary" outlined @click="showModalActaReunion = false" />
+                <Button v-if="!reunionData?.acta" label="Guardar Acta" icon="pi pi-check" severity="success"
+                    :loading="uploadingActa" @click="guardarActaReunion" />
+            </div>
+        </template>
+    </Dialog>
 </template>
 
 <script setup>
@@ -1361,12 +1569,18 @@ const confirmarReserva = async () => {
             observaciones: formReserva.observaciones_reunion || ''
         });
 
-        // 4. Avanzar el expediente a Paso 2 (Confirmación de Reserva)
+        // 4. Crear o registrar la entidad formal Reserva en Backend (Art. 40)
+        await cotizacionServices.confirmarReserva(cotizacion.value.id, {
+            jefe_ucfchm: 'Sergio N. Rivera Céspedes',
+            observaciones: formReserva.observaciones_reunion || ''
+        });
+
+        // 5. Avanzar el expediente a Paso 2 (Confirmación de Reserva)
         await cotizacionServices.actualizar(cotizacion.value.id, {
             paso: 2
         });
 
-        // 5. Refrescar expediente completo
+        // 6. Refrescar expediente completo
         await fetchCotizacion();
 
         toast.add({ severity: 'success', summary: '¡Reserva Confirmada!', detail: 'Respaldo, pago del 20% y reunión operativa registrados con éxito. Expediente avanzado al Paso 2.', life: 4000 });
@@ -1575,6 +1789,234 @@ const getEstadoLabel = (paso) => {
     const found = stepsBase.find(s => s.id === paso);
     return found ? found.label : 'En gestión';
 };
+
+// ============================================================================
+// HELPERS Y COMPUTEDS PARA CONFIRMACIÓN DE RESERVA Y FLUJO DE APROBACIÓN
+// ============================================================================
+const showModalFichaReserva = ref(false);
+const showModalActaReunion = ref(false);
+const uploadingActa = ref(false);
+const archivoActa = ref(null);
+const resumenAcuerdos = ref('');
+
+const getStorageUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const host = typeof window !== 'undefined' && window.location ? window.location.hostname : 'localhost';
+    return `http://${host}:8081/storage/${path}`;
+};
+
+const primerPago = computed(() => cotizacion.value?.pagos?.[0] || null);
+const primerRespaldo = computed(() => cotizacion.value?.respaldos?.[0] || null);
+const reunionData = computed(() => cotizacion.value?.reuniones?.[0] || null);
+
+const isImageFile = (path) => {
+    if (!path) return false;
+    const clean = path.split('?')[0].toLowerCase();
+    return clean.endsWith('.jpg') || clean.endsWith('.jpeg') || clean.endsWith('.png') || clean.endsWith('.webp') || clean.endsWith('.gif');
+};
+
+const isPdfFile = (path) => {
+    if (!path) return false;
+    const clean = path.split('?')[0].toLowerCase();
+    return clean.endsWith('.pdf');
+};
+
+const copiarAlPortapapeles = async (texto) => {
+    if (!texto) return;
+    try {
+        await navigator.clipboard.writeText(texto);
+        toast.add({ severity: 'info', summary: 'Copiado', detail: `Nro. comprobante copiado al portapapeles: ${texto}`, life: 2500 });
+    } catch (err) {
+        // fallback
+    }
+};
+
+const espaciosSeleccionados = computed(() => {
+    if (!cotizacion.value?.tarifas) return [];
+    const map = new Map();
+    cotizacion.value.tarifas.forEach(t => {
+        if (t.espacio?.id && !map.has(t.espacio.id)) {
+            map.set(t.espacio.id, {
+                id: t.espacio.id,
+                nombre: t.espacio.nombre,
+                codigo: t.espacio.codigo || '',
+                tipo: t.tipo_tarifa?.nombre || t.evento?.descripcion || 'Tarifa'
+            });
+        }
+    });
+    return Array.from(map.values());
+});
+
+const pagoAnticipoMonto = computed(() => {
+    if (primerPago.value) return Number(primerPago.value.monto_pagado || 0);
+    return Number(((cotizacion.value?.monto_total || 0) * 0.2).toFixed(2));
+});
+
+const pagoAnticipoFecha = computed(() => {
+    if (primerPago.value?.fecha_deposito) return formatDateShort(primerPago.value.fecha_deposito);
+    return formatDateShort(cotizacion.value?.created_at || new Date());
+});
+
+const saldoPendienteMonto = computed(() => {
+    const total = Number(cotizacion.value?.monto_total || 0);
+    const pagado = Number(pagoAnticipoMonto.value || 0);
+    return Math.max(0, total - pagado);
+});
+
+const garantiaPendienteMonto = computed(() => {
+    return Number(((cotizacion.value?.monto_total || 0) * 0.2).toFixed(2));
+});
+
+const fechaLimitePagoStr = computed(() => {
+    if (!cotizacion.value?.fecha_ini) return '-';
+    const fIni = new Date(cotizacion.value.fecha_ini);
+    fIni.setDate(fIni.getDate() - 10);
+    return formatDateShort(fIni);
+});
+
+const onActaFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        archivoActa.value = file;
+    }
+};
+
+const guardarActaReunion = async () => {
+    if (!reunionData.value?.id) {
+        toast.add({ severity: 'warn', summary: 'Atención', detail: 'No hay una reunión registrada en este expediente.', life: 3000 });
+        return;
+    }
+    if (!archivoActa.value) {
+        toast.add({ severity: 'warn', summary: 'Atención', detail: 'Debe adjuntar el archivo del acta (PDF/imagen).', life: 3000 });
+        return;
+    }
+
+    try {
+        uploadingActa.value = true;
+        const formData = new FormData();
+        formData.append('acta', archivoActa.value);
+        if (resumenAcuerdos.value) {
+            formData.append('resumen_acuerdos', resumenAcuerdos.value);
+        }
+
+        await reunionServices.subirActa(reunionData.value.id, formData);
+        toast.add({ severity: 'success', summary: 'Acta Registrada', detail: 'El acta de reunión operativa ha sido guardada con éxito.', life: 4000 });
+        showModalActaReunion.value = false;
+        archivoActa.value = null;
+        resumenAcuerdos.value = '';
+        await fetchCotizacion();
+    } catch (e) {
+        console.error('Error al subir acta:', e);
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el acta de reunión.', life: 3000 });
+    } finally {
+        uploadingActa.value = false;
+    }
+};
+
+const approvalCards = computed(() => {
+    if (!cotizacion.value) return [];
+    const paso = Number(cotizacion.value.paso || 1);
+    const userNombre = cotizacion.value.user?.name || 'Patricia Castillo Santander';
+
+    const anticipo = formatCurrency(pagoAnticipoMonto.value);
+    const saldo = formatCurrency(saldoPendienteMonto.value);
+
+    const reunion = reunionData.value;
+    const reunionFechaHora = reunion ? `${formatDateShort(reunion.fecha)} ${reunion.hora ? reunion.hora.slice(0, 5) : '10:00'}` : 'Pendiente';
+    const reunionEstado = reunion?.acta ? 'Acta firmada' : 'Acta pendiente';
+
+    return [
+        {
+            id: 1,
+            title: 'Ejecutivo Comercial',
+            line1: userNombre,
+            line2: 'Cotización y CRM',
+            icon: 'pi pi-user',
+            iconBgClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300',
+            status: paso >= 2 ? 'completed' : 'current',
+            canView: true,
+            onView: () => { drawerVisible.value = true; }
+        },
+        {
+            id: 2,
+            title: 'Confirmación de Reserva',
+            line1: paso >= 2 ? `Anticipo 20% · Bs ${anticipo}` : 'Anticipo 20% pendiente',
+            line2: cotizacion.value?.reserva?.fecha_reserva ? `Reserva: ${formatDateShort(cotizacion.value.reserva.fecha_reserva)} · Saldo: Bs ${saldo}` : `Saldo: Bs ${saldo}`,
+            icon: 'pi pi-file-edit',
+            iconBgClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300',
+            status: paso >= 2 ? 'completed' : 'pending',
+            canView: paso >= 2,
+            onView: () => { abrirFichaReserva(); }
+        },
+        {
+            id: 3,
+            title: 'Reunión Operativa',
+            line1: reunionEstado,
+            line2: reunionFechaHora,
+            icon: 'pi pi-calendar',
+            iconBgClass: 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300',
+            status: paso === 2 ? 'current' : (paso > 2 ? 'completed' : 'pending'),
+            canView: true,
+            onView: () => { showModalActaReunion.value = true; }
+        },
+        {
+            id: 4,
+            title: 'Pago Total + Garantía',
+            line1: `Saldo 80%: Bs ${saldo}`,
+            line2: 'Garantía 20% Fdo. Rotativo (Art. 42)',
+            icon: 'pi pi-credit-card',
+            iconBgClass: 'bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400',
+            status: paso === 4 ? 'current' : (paso > 4 ? 'completed' : 'pending'),
+            canView: false,
+            onView: () => {}
+        },
+        {
+            id: 5,
+            title: 'Informe de Inicio',
+            line1: 'Ejecutivo → Jefe UCFCHM',
+            line2: 'Máx. 5 días hábiles (Art. 43)',
+            icon: 'pi pi-file',
+            iconBgClass: 'bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400',
+            status: paso === 5 ? 'current' : (paso > 5 ? 'completed' : 'pending'),
+            canView: false,
+            onView: () => {}
+        },
+        {
+            id: 6,
+            title: 'Revisión Legal + Contrato',
+            line1: 'Asuntos Jurídicos → MAE',
+            line2: 'Elaboración y firma contrato (Art. 44)',
+            icon: 'pi pi-briefcase',
+            iconBgClass: 'bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400',
+            status: paso === 6 ? 'current' : (paso > 6 ? 'completed' : 'pending'),
+            canView: false,
+            onView: () => {}
+        },
+        {
+            id: 7,
+            title: 'Inicio Premontaje',
+            line1: 'Ramiro Atahuichi Ramos',
+            line2: 'Enc. Montaje y Desmontaje',
+            icon: 'pi pi-wrench',
+            iconBgClass: 'bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400',
+            status: paso === 7 ? 'current' : (paso > 7 ? 'completed' : 'pending'),
+            canView: false,
+            onView: () => {}
+        },
+        {
+            id: 8,
+            title: 'Acta de Entrega',
+            line1: 'Acta firmada + anexo',
+            line2: 'Estado de ambientes (Art. 48.I)',
+            icon: 'pi pi-building',
+            iconBgClass: 'bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400',
+            status: paso === 8 ? 'current' : (paso > 8 ? 'completed' : 'pending'),
+            canView: false,
+            onView: () => {}
+        }
+    ];
+});
 
 // ============================================================================
 // HELPERS PARA BLOQUES (Modal edición)
@@ -1943,10 +2385,69 @@ watch(showPdfPreview, (newVal) => {
     }
 });
 
+// Manejadores para Ficha de Reserva Oficial (PDF Art. 40)
+const loadingFichaPdf = ref(false);
+const fichaPdfUrl = ref(null);
+
+const abrirFichaReserva = async () => {
+    if (!cotizacion.value) return;
+    try {
+        loadingFichaPdf.value = true;
+        showModalFichaReserva.value = true;
+
+        if (fichaPdfUrl.value) {
+            window.URL.revokeObjectURL(fichaPdfUrl.value);
+            fichaPdfUrl.value = null;
+        }
+
+        const response = await cotizacionServices.getFichaReservaPdf(cotizacion.value.id);
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        fichaPdfUrl.value = window.URL.createObjectURL(blob);
+    } catch (e) {
+        console.error('Error al generar Ficha de Reserva PDF:', e);
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo generar la Ficha de Reserva oficial en PDF.', life: 4000 });
+        showModalFichaReserva.value = false;
+    } finally {
+        loadingFichaPdf.value = false;
+    }
+};
+
+const downloadFichaPdf = () => {
+    if (!fichaPdfUrl.value) return;
+    const link = document.createElement('a');
+    link.href = fichaPdfUrl.value;
+    const cod = cotizacion.value?.reserva?.codigo || cotizacion.value?.codigo || 'Ficha_Reserva';
+    link.setAttribute('download', `${cod.replace(/[\/\\]/g, '-')}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+const printFichaPdf = () => {
+    if (!fichaPdfUrl.value) return;
+    const iframe = document.getElementById('iframe-ficha-reserva');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    } else {
+        window.open(fichaPdfUrl.value, '_blank').print();
+    }
+};
+
+watch(showModalFichaReserva, (newVal) => {
+    if (!newVal && fichaPdfUrl.value) {
+        window.URL.revokeObjectURL(fichaPdfUrl.value);
+        fichaPdfUrl.value = null;
+    }
+});
+
 import { onUnmounted } from 'vue';
 onUnmounted(() => {
     if (pdfUrl.value) {
         window.URL.revokeObjectURL(pdfUrl.value);
+    }
+    if (fichaPdfUrl.value) {
+        window.URL.revokeObjectURL(fichaPdfUrl.value);
     }
 });
 </script>

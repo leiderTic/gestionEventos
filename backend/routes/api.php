@@ -19,6 +19,7 @@ use App\Http\Controllers\PorcentajeController;
 use App\Http\Controllers\TipoRespaldoController;
 use App\Http\Controllers\ModalidadController;
 use App\Http\Controllers\TipoCrmController;
+use App\Http\Controllers\ReservaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/v1/auth')->group(function () {
@@ -52,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('cotizaciones/{id}')->group(function () {
         Route::get('imprimir', [CotizacionController::class, 'imprimir']);
+        Route::get('ficha-reserva-pdf', [ReservaController::class, 'imprimirFichaReserva']);
+        Route::post('confirmar-reserva', [ReservaController::class, 'confirmarReserva']);
 
         // Pagos y Respaldos (Sub-recursos)
         Route::post('registrar-pago', [PagoController::class, 'registrarPago']);

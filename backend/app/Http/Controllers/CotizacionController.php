@@ -124,8 +124,18 @@ class CotizacionController extends Controller
 
     public function show(string $id)
     {
-        $cotizacion = Cotizacion::with(['user', 'evento', 'clientes', 'servicios', 'tarifas.evento', 'tarifas.espacio'])
-            ->findOrFail($id);
+        $cotizacion = Cotizacion::with([
+            'user',
+            'evento',
+            'clientes',
+            'servicios',
+            'tarifas.evento',
+            'tarifas.espacio',
+            'pagos.banco',
+            'respaldos.tipoRespaldo',
+            'reuniones.modalidad',
+            'reserva.user'
+        ])->findOrFail($id);
         return response()->json($cotizacion);
     }
 
@@ -134,13 +144,13 @@ class CotizacionController extends Controller
         $cotizacion = Cotizacion::findOrFail($id);
 
         $request->validate([
-            'descripcion' => 'required|string|max:255',
-            'fecha_ini' => 'required|date',
-            'fecha_fin' => 'required|date|after_or_equal:fecha_ini',
-            'evento_id' => 'required|exists:eventos,id',
-            'paso' => 'integer',
-            'vencido' => 'boolean',
-            'motivo' => 'required|string|min:5' // Nuevo campo obligatorio para auditoría
+            'descripcion' => 'sometimes|required|string|max:255',
+            'fecha_ini' => 'sometimes|required|date',
+            'fecha_fin' => 'sometimes|required|date|after_or_equal:fecha_ini',
+            'evento_id' => 'sometimes|required|exists:eventos,id',
+            'paso' => 'sometimes|integer',
+            'vencido' => 'sometimes|boolean',
+            'motivo' => 'nullable|string|min:3'
         ]);
 
         return DB::transaction(function () use ($request, $cotizacion) {
@@ -189,7 +199,7 @@ class CotizacionController extends Controller
                 'cotizacion_id' => $cotizacion->id,
                 'user_id' => Auth::id() ?? 1, // Fallback si no hay sesión para pruebas
                 'accion' => 'actualizacion',
-                'motivo' => $request->motivo,
+                'motivo' => $request->motivo ?? ('Actualización a paso ' . ($request->paso ?? $cotizacion->paso)),
                 'cambios' => [
                     'antes' => $oldData,
                     'despues' => $cotizacion->fresh()->toArray()

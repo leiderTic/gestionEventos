@@ -20,7 +20,7 @@ class RespaldoController extends Controller
             'id_tipo_respaldo' => 'required|exists:tipo_respaldos,id',
         ]);
 
-        $path = $request->file('archivo')->store('respaldos', 'public');
+        $path = $request->file('archivo')->store("expedientes/{$cotizacion->id}/respaldos", 'public');
 
         $respaldo = Respaldo::create([
             'archivo_path' => $path,

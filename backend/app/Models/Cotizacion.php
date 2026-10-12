@@ -136,4 +136,9 @@ class Cotizacion extends Model
     {
         return $this->hasMany(Crm::class);
     }
+
+    public function reserva()
+    {
+        return $this->hasOne(Reserva::class);
+    }
 }
