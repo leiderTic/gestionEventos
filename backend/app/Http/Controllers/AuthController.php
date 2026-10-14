@@ -24,12 +24,18 @@ class AuthController extends Controller
             ]);
         }
 
+        if (! $user->activo) {
+            throw ValidationException::withMessages([
+                'username' => ['El usuario está desactivado. Contacte al administrador.'],
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user
+            'user' => $user->toAuthPayload()
         ]);
     }
 
@@ -69,11 +75,11 @@ class AuthController extends Controller
 
     public function funProfile(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($request->user()->toAuthPayload());
     }
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($request->user()->toAuthPayload());
     }
 }

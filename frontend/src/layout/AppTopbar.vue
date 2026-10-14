@@ -2,10 +2,10 @@
 import { useLayout } from '@/layout/composables/layout';
 import AppConfigurator from './AppConfigurator.vue';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
-const router = useRouter();
+const authStore = useAuthStore();
 const op = ref();
 
 const toggleProfile = (event) => {
@@ -13,8 +13,7 @@ const toggleProfile = (event) => {
 };
 
 const onLogout = () => {
-    localStorage.removeItem('access_token');
-    router.push('/login');
+    authStore.logout();
 };
 </script>
 
@@ -93,23 +92,25 @@ const onLogout = () => {
                     <div>
                         <span class="font-medium block mb-2 text-color-secondary text-sm uppercase">Usuario</span>
                         <div class="flex items-center gap-4 p-3 bg-surface-100 dark:bg-surface-800 rounded-xl">
-                            <Avatar icon="pi pi-user" size="large" shape="circle" class="bg-primary text-primary-contrast" />
-                            <div class="flex flex-col">
-                                <span class="font-bold text-lg">Administrador</span>
-                                <span class="text-xs text-muted-color">admin@eventos.com</span>
+                            <Avatar :label="authStore.user?.alias || (authStore.user?.name ? authStore.user.name.substring(0, 2).toUpperCase() : 'U')" size="large" shape="circle" class="bg-primary text-primary-contrast font-bold" />
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold text-base truncate">{{ authStore.user?.name || 'Usuario' }}</span>
+                                <span class="text-xs text-muted-color truncate">{{ authStore.user?.email || '@' + authStore.user?.username }}</span>
                             </div>
                         </div>
                     </div>
                     <div class="flex flex-col gap-3">
-                        <div class="text-xs font-bold text-muted-color uppercase px-1">Información</div>
-                        <div class="flex flex-col gap-2 text-sm px-1">
+                        <div class="text-xs font-bold text-muted-color uppercase px-1">Roles asignados</div>
+                        <div class="flex flex-wrap gap-1 px-1">
+                            <span v-for="rol in authStore.roles" :key="rol" class="font-bold bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded text-[11px]">
+                                {{ rol }}
+                            </span>
+                            <span v-if="!authStore.roles || authStore.roles.length === 0" class="text-xs text-muted-color italic">Sin rol</span>
+                        </div>
+                        <div class="flex flex-col gap-2 text-sm px-1 pt-1 border-t border-surface-200 dark:border-surface-700">
                             <div class="flex justify-between items-center">
-                                <span class="text-muted-color">Rol:</span>
-                                <span class="font-semibold bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded text-xs">Super Admin</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-muted-color">Estado:</span>
-                                <span class="text-green-500 flex items-center gap-1 font-medium">
+                                <span class="text-muted-color text-xs">Estado:</span>
+                                <span class="text-green-500 flex items-center gap-1 font-medium text-xs">
                                     <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                                     Activo
                                 </span>

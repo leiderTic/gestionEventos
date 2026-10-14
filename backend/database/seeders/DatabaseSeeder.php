@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             MasterDataSeeder::class,
             CrmReunionSeeder::class,
             TemporadaSeeder::class,
+            RolePermissionSeeder::class,
             UserSeeder::class,
             ClienteSeeder::class,
             EventoSeeder::class,

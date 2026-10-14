@@ -20,11 +20,12 @@ use App\Http\Controllers\TipoRespaldoController;
 use App\Http\Controllers\ModalidadController;
 use App\Http\Controllers\TipoCrmController;
 use App\Http\Controllers\ReservaController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/v1/auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'funLogin']);   
-    Route::post('/register', [AuthController::class, 'funRegister']);
+    Route::post('/login', [AuthController::class, 'funLogin']);
+    // Registro público deshabilitado: los usuarios los crea el Administrador (/api/users)
     
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [AuthController::class, 'funProfile']);   
@@ -47,31 +48,51 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('bloques', BloqueController::class);
     Route::apiResource('tipo-espacios', TipoEspacioController::class);
 
-    // Cotizaciones
-    Route::post('cotizaciones/preview', [CotizacionController::class, 'preview']);
-    Route::apiResource('cotizaciones', CotizacionController::class);
+    // Usuarios y Roles (solo Administrador)
+    Route::middleware('permission:usuarios.gestionar')->group(function () {
+        Route::get('roles', [UserController::class, 'roles']);
+        Route::patch('users/{user}/toggle-activo', [UserController::class, 'toggleActivo']);
+        Route::apiResource('users', UserController::class);
+    });
+
+    // Cotizaciones (lectura filtrada por rol en el controlador)
+    Route::get('cotizaciones', [CotizacionController::class, 'index']);
+    Route::get('cotizaciones/{cotizacione}', [CotizacionController::class, 'show']);
+    Route::middleware('permission:cotizaciones.crear')->group(function () {
+        Route::post('cotizaciones/preview', [CotizacionController::class, 'preview']);
+        Route::post('cotizaciones', [CotizacionController::class, 'store']);
+    });
+    Route::middleware('permission:cotizaciones.editar')->group(function () {
+        Route::match(['put', 'patch'], 'cotizaciones/{cotizacione}', [CotizacionController::class, 'update']);
+        Route::delete('cotizaciones/{cotizacione}', [CotizacionController::class, 'destroy']);
+    });
 
     Route::prefix('cotizaciones/{id}')->group(function () {
         Route::get('imprimir', [CotizacionController::class, 'imprimir']);
         Route::get('ficha-reserva-pdf', [ReservaController::class, 'imprimirFichaReserva']);
-        Route::post('confirmar-reserva', [ReservaController::class, 'confirmarReserva']);
-
-        // Pagos y Respaldos (Sub-recursos)
-        Route::post('registrar-pago', [PagoController::class, 'registrarPago']);
         Route::get('respaldos', [RespaldoController::class, 'index']);
-        Route::post('subir-respaldo', [RespaldoController::class, 'store']);
-
-        // CRM y Seguimiento (Sub-recursos)
         Route::get('crms', [CrmController::class, 'index']);
-        Route::post('crms', [CrmController::class, 'store']);
-
-        // Reuniones (Sub-recursos)
         Route::get('reuniones', [ReunionController::class, 'index']);
-        Route::post('reuniones', [ReunionController::class, 'store']);
+
+        // Paso 2: Confirmación de reserva (Técnico Comercial)
+        Route::middleware('permission:reservas.confirmar')->group(function () {
+            Route::post('confirmar-reserva', [ReservaController::class, 'confirmarReserva']);
+            Route::post('subir-respaldo', [RespaldoController::class, 'store']);
+            Route::post('reuniones', [ReunionController::class, 'store']);
+        });
+
+        // Pagos con boucher (Técnico Comercial)
+        Route::post('registrar-pago', [PagoController::class, 'registrarPago'])
+            ->middleware('permission:pagos.registrar');
+
+        // CRM
+        Route::post('crms', [CrmController::class, 'store'])
+            ->middleware('permission:cotizaciones.editar');
     });
 
     // Reuniones — Rutas independientes
-    Route::post('reuniones/{id}/acta', [ReunionController::class, 'subirActa']);
+    Route::post('reuniones/{id}/acta', [ReunionController::class, 'subirActa'])
+        ->middleware('permission:reservas.confirmar');
 
     // Módulo Administrativo / Pagos
     Route::get('administrativo/pagos-pendientes', [PagoController::class, 'pagosPendientes']);

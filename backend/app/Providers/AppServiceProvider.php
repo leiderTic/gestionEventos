@@ -25,5 +25,10 @@ class AppServiceProvider extends ServiceProvider
     {
         CotizacionServicio::observe(CotizacionServicioObserver::class);
         CotizacionTarifa::observe(CotizacionTarifaObserver::class);
+
+        // El Administrador tiene acceso total
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return $user->hasRole('Administrador') ? true : null;
+        });
     }
 }

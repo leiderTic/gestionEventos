@@ -102,11 +102,12 @@
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import authService from './../../services/auth.service';
+import { useAuthStore } from '@/stores/auth';
 
 const usuario = ref({ username: "", password: "" });
 const errors = ref({});
 const router = useRouter();
+const authStore = useAuthStore();
 const checked = ref(false);
 const loading = ref(false);
 
@@ -115,8 +116,7 @@ async function funIngresar() {
     loading.value = true;
 
     try {
-        const { data } = await authService.login(usuario.value);
-        localStorage.setItem('access_token', data.access_token);
+        await authStore.login(usuario.value);
         router.push('/admin/dashboard');
     } catch (error) {
         const respuesta = error.response?.data;

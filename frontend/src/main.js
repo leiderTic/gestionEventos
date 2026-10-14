@@ -10,9 +10,12 @@ import ToastService from 'primevue/toastservice';
 
 import '@/assets/tailwind.css';
 import '@/assets/styles.scss';
+import canDirective from '@/directives/can';
 
 const app = createApp(App);
 const pinia = createPinia();
+
+app.directive('can', canDirective);
 
 app.use(pinia);
 app.use(router);

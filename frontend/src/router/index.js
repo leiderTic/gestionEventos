@@ -7,6 +7,8 @@ import NotFound from '../views/errors/NotFound.vue'
 import CotizacionNuevo from '@/views/admin/cotizacion/CotizacionNuevo.vue';
 import Cotizacion from '@/views/admin/cotizacion/Cotizacion.vue';
 import CotizacionDetalle from '@/views/admin/cotizacion/CotizacionDetalle.vue';
+import UsuarioList from '@/views/admin/usuarios/UsuarioList.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const routes = [
     {
@@ -40,7 +42,10 @@ const routes = [
             {
                 path: 'cotizacion/nueva',
                 name: 'cotizacionNueva',
-                component: CotizacionNuevo
+                component: CotizacionNuevo,
+                meta: {
+                    permission: 'cotizaciones.crear'
+                }
             },
             {
                 path: 'cotizacion',
@@ -52,6 +57,18 @@ const routes = [
                 name: 'cotizacionDetalle',
                 component: CotizacionDetalle
             },
+            {
+                path: 'usuarios',
+                name: 'usuarios',
+                component: UsuarioList,
+                meta: {
+                    permission: 'usuarios.gestionar'
+                }
+            },
+            {
+                path: 'roles',
+                redirect: { name: 'usuarios' }
+            }
         ]
     },
     {
@@ -68,21 +85,27 @@ const router = createRouter({
 
 // guardia de rutas
 router.beforeEach((to, from) => {
-    let token = localStorage.getItem('access_token')
+    const authStore = useAuthStore();
+    const token = authStore.token || localStorage.getItem('access_token');
 
     if (to.meta.requiresAuth) {
-        if (token) {
-            return true
-        } else {
-            return { name: 'login' }
+        if (!token) {
+            return { name: 'login' };
         }
+
+        // Validación de permisos
+        if (to.meta.permission && !authStore.can(to.meta.permission)) {
+            return { name: 'dashboard' };
+        }
+
+        return true;
     }
 
     if (to.meta.requiresIfAuth && token) {
-        return { name: 'dashboard' }
+        return { name: 'dashboard' };
     }
 
-    return true
+    return true;
 })
 
 export default router

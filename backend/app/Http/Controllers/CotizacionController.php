@@ -21,16 +21,8 @@ class CotizacionController extends Controller
     public function index()
     {
         $query = Cotizacion::with(['user', 'evento', 'clientes', 'servicios', 'tarifas.evento', 'tarifas.espacio'])
+            ->visiblePara(Auth::user())
             ->orderBy('created_at', 'desc');
-
-        // Buena Práctica de Seguridad (Row-Level Security):
-        $user = Auth::user();
-        
-        if ($user) {
-            // Filtramos directamente por el ID del usuario en sesión
-            // Nota: Si luego agregas un campo a tu BD (ej. $user->is_admin == true), puedes envolver esto en un IF.
-            $query->where('user_id', $user->id);
-        }
 
         $cotizaciones = $query->get();
         return response()->json($cotizaciones);
@@ -135,7 +127,11 @@ class CotizacionController extends Controller
             'respaldos.tipoRespaldo',
             'reuniones.modalidad',
             'reserva.user'
-        ])->findOrFail($id);
+        ])->visiblePara(Auth::user())->find($id);
+
+        if (!$cotizacion) {
+            abort(Cotizacion::whereKey($id)->exists() ? 403 : 404, 'No tiene acceso a esta cotización.');
+        }
         return response()->json($cotizacion);
     }
 

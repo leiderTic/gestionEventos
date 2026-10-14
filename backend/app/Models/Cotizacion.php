@@ -141,4 +141,43 @@ class Cotizacion extends Model
     {
         return $this->hasOne(Reserva::class);
     }
+
+    /**
+     * Visibilidad por rol (Row-Level Security). Para usuarios con varios roles se combinan con OR.
+     *  - cotizaciones.ver_todas  → sin filtro (Administrador)
+     *  - cotizaciones.ver_propias → solo las creadas por el usuario (Técnico Comercial)
+     *  - uaf.ver_con_boucher      → con al menos un pago con boucher (Técnico UAF)
+     *  - legal.ver_pagadas        → pagos (no rechazados) cubren el 100% del total (Técnico Legal)
+     */
+    public function scopeVisiblePara($query, ?User $user)
+    {
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($user->can('cotizaciones.ver_todas')) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($user) {
+            $q->whereRaw('1 = 0');
+
+            if ($user->can('cotizaciones.ver_propias')) {
+                $q->orWhere('cotizaciones.user_id', $user->id);
+            }
+            if ($user->can('uaf.ver_con_boucher')) {
+                $q->orWhereHas('pagos', fn ($p) => $p->whereNotNull('boucher_path'));
+            }
+            if ($user->can('legal.ver_pagadas')) {
+                $q->orWhereRaw(
+                    "cotizaciones.monto_total > 0 AND (
+                        SELECT COALESCE(SUM(p.monto_pagado), 0)
+                        FROM pagos p
+                        JOIN cotizacion_pago cp ON cp.pago_id = p.id
+                        WHERE cp.cotizacion_id = cotizaciones.id
+                          AND (p.estado IS NULL OR p.estado <> 'rechazado')
+                    ) >= cotizaciones.monto_total"
+                );
+            }
+        });
+    }
 }
