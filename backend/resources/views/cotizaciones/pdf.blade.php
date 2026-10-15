@@ -273,7 +273,8 @@
         </div>
 
         <div class="legal">
-            Todos los precios incluyen impuestos de ley (IT/IVA). Cotización válida 15 días calendario. Para reserva formal se requiere carta de solicitud oficial.
+            Es importante coordinar previamente con el personal dependiente del Campo Ferial Chuquiago Marca, la fecha y horario de instalación y adecuación de los ambientes (si corresponde).<br>
+            Finalmente, cabe señalar que la factura correspondiente será emita según los datos que se solicite el arrendatario.
         </div>
     </div>
 

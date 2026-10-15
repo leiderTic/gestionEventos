@@ -30,11 +30,42 @@ class CotizacionController extends Controller
 
     public function store(Request $request)
     {
+        foreach (['clientes', 'servicios', 'tarifas'] as $field) {
+            if ($request->has($field) && is_string($request->$field)) {
+                $decoded = json_decode($request->$field, true);
+                if (is_array($decoded)) {
+                    $request->merge([$field => $decoded]);
+                }
+            }
+        }
+
         $request->validate([
             'descripcion' => 'required|string|max:255',
             'fecha_ini' => 'required|date',
             'fecha_fin' => 'required|date|after_or_equal:fecha_ini',
             'evento_id' => 'required|exists:eventos,id',
+            'solicitud_arrendamiento' => [
+                'nullable', 'file', 'extensions:pdf', 'max:10240',
+                function ($attribute, $value, $fail) {
+                    if ($value && $value->isValid()) {
+                        $header = @file_get_contents($value->getRealPath(), false, null, 0, 100);
+                        if ($header !== false && (str_contains(strtolower($header), '<!doctype') || str_contains(strtolower($header), '<html'))) {
+                            $fail('El archivo de Solicitud de Arrendamiento es una página web (HTML) y no un documento PDF válido.');
+                        }
+                    }
+                }
+            ],
+            'verificacion_habilitacion' => [
+                'nullable', 'file', 'extensions:pdf', 'max:10240',
+                function ($attribute, $value, $fail) {
+                    if ($value && $value->isValid()) {
+                        $header = @file_get_contents($value->getRealPath(), false, null, 0, 100);
+                        if ($header !== false && (str_contains(strtolower($header), '<!doctype') || str_contains(strtolower($header), '<html'))) {
+                            $fail('El archivo de Verificación de Habilitación es una página web (HTML) y no un documento PDF válido.');
+                        }
+                    }
+                }
+            ],
             'clientes' => 'nullable|array',
             'clientes.*.id' => 'required|exists:clientes,id',
             'servicios' => 'nullable|array',
@@ -46,6 +77,11 @@ class CotizacionController extends Controller
             'tarifas.*.id' => 'required|exists:tarifas,id',
             'tarifas.*.dias' => 'required|numeric|min:0',
             'tarifas.*.precio_aplicado' => 'required|numeric|min:0',
+        ], [
+            'solicitud_arrendamiento.extensions' => 'El archivo de Solicitud de Arrendamiento debe ser de formato PDF (.pdf).',
+            'solicitud_arrendamiento.max' => 'La Solicitud de Arrendamiento no puede superar los 10 MB.',
+            'verificacion_habilitacion.extensions' => 'El archivo de Verificación de Habilitación debe ser de formato PDF (.pdf).',
+            'verificacion_habilitacion.max' => 'La Verificación de Habilitación no puede superar los 10 MB.',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -71,6 +107,25 @@ class CotizacionController extends Controller
                 'user_id' => $userId,
                 'evento_id' => $request->evento_id,
             ]);
+
+            $updates = [];
+            if ($request->hasFile('solicitud_arrendamiento')) {
+                $ext = strtolower($request->file('solicitud_arrendamiento')->getClientOriginalExtension() ?: 'pdf');
+                $filename = \Illuminate\Support\Str::random(40) . '.' . $ext;
+                $updates['solicitud_arrendamiento_path'] = $request->file('solicitud_arrendamiento')
+                    ->storeAs("expedientes/{$cotizacion->id}/documentos", $filename, 'public');
+            }
+
+            if ($request->hasFile('verificacion_habilitacion')) {
+                $ext = strtolower($request->file('verificacion_habilitacion')->getClientOriginalExtension() ?: 'pdf');
+                $filename = \Illuminate\Support\Str::random(40) . '.' . $ext;
+                $updates['verificacion_habilitacion_path'] = $request->file('verificacion_habilitacion')
+                    ->storeAs("expedientes/{$cotizacion->id}/documentos", $filename, 'public');
+            }
+
+            if (!empty($updates)) {
+                $cotizacion->update($updates);
+            }
 
             if ($request->has('clientes')) {
                 $syncData = [];
@@ -457,4 +512,66 @@ class CotizacionController extends Controller
             return response()->json(['error' => 'Error al generar el PDF', 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function subirDocumentosBase(Request $request, string $id)
+    {
+        $cotizacion = Cotizacion::visiblePara(Auth::user())->findOrFail($id);
+
+        $request->validate([
+            'solicitud_arrendamiento' => [
+                'nullable', 'file', 'extensions:pdf', 'max:10240',
+                function ($attribute, $value, $fail) {
+                    if ($value && $value->isValid()) {
+                        $header = @file_get_contents($value->getRealPath(), false, null, 0, 100);
+                        if ($header !== false && (str_contains(strtolower($header), '<!doctype') || str_contains(strtolower($header), '<html'))) {
+                            $fail('El archivo de Solicitud de Arrendamiento es una página web (HTML) y no un documento PDF válido.');
+                        }
+                    }
+                }
+            ],
+            'verificacion_habilitacion' => [
+                'nullable', 'file', 'extensions:pdf', 'max:10240',
+                function ($attribute, $value, $fail) {
+                    if ($value && $value->isValid()) {
+                        $header = @file_get_contents($value->getRealPath(), false, null, 0, 100);
+                        if ($header !== false && (str_contains(strtolower($header), '<!doctype') || str_contains(strtolower($header), '<html'))) {
+                            $fail('El archivo de Verificación de Habilitación es una página web (HTML) y no un documento PDF válido.');
+                        }
+                    }
+                }
+            ],
+        ], [
+            'solicitud_arrendamiento.extensions' => 'El archivo de Solicitud de Arrendamiento debe ser de formato PDF (.pdf).',
+            'solicitud_arrendamiento.max' => 'La Solicitud de Arrendamiento no puede superar los 10 MB.',
+            'verificacion_habilitacion.extensions' => 'El archivo de Verificación de Habilitación debe ser de formato PDF (.pdf).',
+            'verificacion_habilitacion.max' => 'La Verificación de Habilitación no puede superar los 10 MB.',
+        ]);
+
+        $updates = [];
+        if ($request->hasFile('solicitud_arrendamiento')) {
+            $ext = strtolower($request->file('solicitud_arrendamiento')->getClientOriginalExtension() ?: 'pdf');
+            $filename = \Illuminate\Support\Str::random(40) . '.' . $ext;
+            $updates['solicitud_arrendamiento_path'] = $request->file('solicitud_arrendamiento')
+                ->storeAs("expedientes/{$cotizacion->id}/documentos", $filename, 'public');
+        }
+
+        if ($request->hasFile('verificacion_habilitacion')) {
+            $ext = strtolower($request->file('verificacion_habilitacion')->getClientOriginalExtension() ?: 'pdf');
+            $filename = \Illuminate\Support\Str::random(40) . '.' . $ext;
+            $updates['verificacion_habilitacion_path'] = $request->file('verificacion_habilitacion')
+                ->storeAs("expedientes/{$cotizacion->id}/documentos", $filename, 'public');
+        }
+
+        if (!empty($updates)) {
+            $cotizacion->update($updates);
+        }
+
+        return response()->json([
+            'message' => 'Documentos base actualizados exitosamente.',
+            'solicitud_arrendamiento_path' => $cotizacion->solicitud_arrendamiento_path,
+            'verificacion_habilitacion_path' => $cotizacion->verificacion_habilitacion_path,
+            'cotizacion' => $cotizacion->fresh(['user', 'evento', 'clientes', 'servicios', 'tarifas.evento', 'tarifas.espacio'])
+        ]);
+    }
 }
+

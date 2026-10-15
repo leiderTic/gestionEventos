@@ -103,6 +103,69 @@
                         </div>
                     </div>
 
+                    <!-- DOCUMENTOS BASE DE LA COTIZACIÓN (PASO 1) -->
+                    <div class="mb-6 p-4 rounded-xl bg-surface-50 dark:bg-surface-900/60 border border-surface-200 dark:border-surface-800">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2 text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wider">
+                                <i class="pi pi-paperclip text-primary"></i>
+                                <span>Documentos Base de la Cotización</span>
+                            </div>
+                            <Button label="Adjuntar / Actualizar" icon="pi pi-upload" text size="small"
+                                class="!text-xs !py-1 !px-2 font-bold text-primary"
+                                @click="openModalDocumentosBase" />
+                        </div>
+
+                        <div v-if="cotizacion.solicitud_arrendamiento_path || cotizacion.verificacion_habilitacion_path"
+                            class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Solicitud de Arrendamiento -->
+                            <div v-if="cotizacion.solicitud_arrendamiento_path"
+                                class="flex items-center justify-between p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 shadow-xs">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+                                        <i class="pi pi-file-edit text-sm"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">Solicitud de Arrendamiento</p>
+                                        <p class="text-[10px] text-muted-color m-0">Borrador y requerimientos</p>
+                                    </div>
+                                </div>
+                                <Button label="Ver PDF" icon="pi pi-eye" size="small"
+                                    class="!text-xs !py-1.5 !px-3 font-bold !bg-primary-50 hover:!bg-primary-100 !text-primary dark:!bg-primary-950/40 dark:!text-primary-300 !border-none flex items-center gap-1.5 shadow-none"
+                                    @click="abrirVisorPdf('Solicitud de Arrendamiento', 'Formulario del cliente con requerimientos y borrador del evento', cotizacion.solicitud_arrendamiento_path)" />
+                            </div>
+                            <div v-else class="flex items-center gap-2 p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-dashed border-surface-200 dark:border-surface-700 text-muted-color text-xs">
+                                <i class="pi pi-info-circle text-orange-400"></i>
+                                <span>Solicitud de Arrendamiento no adjunta</span>
+                            </div>
+
+                            <!-- Verificación de Habilitación -->
+                            <div v-if="cotizacion.verificacion_habilitacion_path"
+                                class="flex items-center justify-between p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 shadow-xs">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center flex-shrink-0">
+                                        <i class="pi pi-shield text-sm"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">Verificación de Habilitación</p>
+                                        <p class="text-[10px] text-muted-color m-0">Certificación administrativa</p>
+                                    </div>
+                                </div>
+                                <Button label="Ver PDF" icon="pi pi-eye" size="small"
+                                    class="!text-xs !py-1.5 !px-3 font-bold !bg-teal-50 hover:!bg-teal-100 !text-teal-700 dark:!bg-teal-950/40 dark:!text-teal-300 !border-none flex items-center gap-1.5 shadow-none"
+                                    @click="abrirVisorPdf('Verificación de Habilitación', 'Certificación administrativa de habilitación y buen expediente', cotizacion.verificacion_habilitacion_path)" />
+                            </div>
+                            <div v-else class="flex items-center gap-2 p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-dashed border-surface-200 dark:border-surface-700 text-muted-color text-xs">
+                                <i class="pi pi-info-circle text-orange-400"></i>
+                                <span>Verificación de Habilitación no adjunta</span>
+                            </div>
+                        </div>
+
+                        <div v-else class="flex items-center gap-2 text-xs text-muted-color py-1">
+                            <i class="pi pi-info-circle text-surface-400"></i>
+                            <span>No se han adjuntado la Solicitud de Arrendamiento ni la Verificación de Habilitación aún.</span>
+                        </div>
+                    </div>
+
                     <!-- LISTA DE ITEMS (CARRO) -->
                     <div class="mb-6 space-y-1">
                         <template v-if="cotizacion.tarifas && cotizacion.tarifas.length > 0">
@@ -1408,6 +1471,94 @@
             </div>
         </template>
     </Dialog>
+
+    <!-- MODAL: SUBIR / ACTUALIZAR DOCUMENTOS BASE -->
+    <Dialog v-model:visible="showModalDocumentosBase" header="Documentos Base de la Cotización" modal
+        :style="{ width: '38rem' }" :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
+        <div class="space-y-4 pt-2">
+            <p class="text-xs text-surface-600 dark:text-surface-400 m-0">
+                Adjunte o actualice la Solicitud de Arrendamiento y la Verificación de Habilitación en formato PDF.
+            </p>
+
+            <!-- Campo 1: Solicitud de Arrendamiento -->
+            <div class="border border-surface-200 dark:border-surface-700 rounded-xl p-3 bg-surface-50 dark:bg-surface-900/40">
+                <label class="block text-xs font-bold text-surface-900 dark:text-surface-0 uppercase tracking-wider mb-1">
+                    Solicitud de Arrendamiento (PDF)
+                </label>
+                <p class="text-[11px] text-muted-color mb-2">Borrador de fechas, espacios y servicios firmado por el cliente.</p>
+                <div v-if="cotizacion.solicitud_arrendamiento_path" class="mb-2 text-xs text-emerald-600 flex items-center gap-1 font-medium">
+                    <i class="pi pi-check-circle"></i>
+                    <span>Archivo actual registrado en el expediente.</span>
+                </div>
+                <input type="file" accept="application/pdf,.pdf" @change="onModalSolicitudChange"
+                    class="w-full text-xs text-surface-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+            </div>
+
+            <!-- Campo 2: Verificación de Habilitación -->
+            <div class="border border-surface-200 dark:border-surface-700 rounded-xl p-3 bg-surface-50 dark:bg-surface-900/40">
+                <label class="block text-xs font-bold text-surface-900 dark:text-surface-0 uppercase tracking-wider mb-1">
+                    Verificación de Habilitación (PDF)
+                </label>
+                <p class="text-[11px] text-muted-color mb-2">Certificación administrativa de habilitación y buen expediente.</p>
+                <div v-if="cotizacion.verificacion_habilitacion_path" class="mb-2 text-xs text-teal-600 flex items-center gap-1 font-medium">
+                    <i class="pi pi-check-circle"></i>
+                    <span>Archivo actual registrado en el expediente.</span>
+                </div>
+                <input type="file" accept="application/pdf,.pdf" @change="onModalHabilitacionChange"
+                    class="w-full text-xs text-surface-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer" />
+            </div>
+        </div>
+
+        <template #footer>
+            <div class="flex justify-end gap-2 pt-3">
+                <Button label="Cancelar" icon="pi pi-times" text severity="secondary" @click="showModalDocumentosBase = false" />
+                <Button label="Guardar Documentos" icon="pi pi-check" :loading="guardandoDocumentosBase"
+                    :disabled="!modalArchivoSolicitud && !modalArchivoHabilitacion"
+                    @click="guardarDocumentosBaseModal" />
+            </div>
+        </template>
+    </Dialog>
+
+    <!-- MODAL ELEGANTE: VISUALIZACIÓN DE DOCUMENTO PDF EN LA PÁGINA -->
+    <Dialog v-model:visible="showModalVisorPdf" modal :showHeader="false"
+        class="!p-0 !border-none !overflow-hidden max-w-[1200px]" :style="{ width: '92vw' }"
+        :contentStyle="{ padding: '0' }">
+        <template #default>
+            <div
+                class="bg-[#06352c] dark:bg-surface-900 text-white px-6 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-white/10 dark:border-surface-700">
+                <div class="flex items-center gap-3">
+                    <div class="bg-red-500/90 text-white p-2 rounded-xl flex items-center justify-center shadow-md">
+                        <i class="pi pi-file-pdf text-xl"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-bold text-lg leading-tight">{{ visorPdfTitulo }}</span>
+                        <span class="text-xs text-white/60 mt-0.5">{{ visorPdfSubtitulo }}</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a :href="visorPdfUrl" download target="_blank"
+                        class="p-button p-button-sm !bg-white/15 hover:!bg-white/25 !text-white !border-none !py-1.5 !px-3.5 text-xs font-bold flex items-center gap-1.5 rounded-lg no-underline transition-all">
+                        <i class="pi pi-download text-xs"></i>
+                        <span>Descargar</span>
+                    </a>
+                    <a :href="visorPdfUrl" target="_blank"
+                        class="p-button p-button-sm !bg-white/15 hover:!bg-white/25 !text-white !border-none !py-1.5 !px-2.5 text-xs font-bold flex items-center rounded-lg no-underline transition-all"
+                        title="Abrir en pestaña externa">
+                        <i class="pi pi-external-link text-xs"></i>
+                    </a>
+                    <div class="w-px h-6 bg-white/20 mx-1"></div>
+                    <Button icon="pi pi-times" text rounded @click="showModalVisorPdf = false"
+                        class="!text-white hover:!bg-white/15 w-8 h-8" />
+                </div>
+            </div>
+
+            <!-- Visor Iframe -->
+            <div class="w-full h-[82vh] bg-surface-100 dark:bg-surface-950 flex flex-col">
+                <iframe v-if="visorPdfUrl" :src="visorPdfUrl"
+                    class="w-full h-full border-none bg-white"></iframe>
+            </div>
+        </template>
+    </Dialog>
 </template>
 
 <script setup>
@@ -1449,6 +1600,111 @@ const editandoTipoEvento = ref(false); // true si ya se editó antes
 // Estado para Vista Previa PDF
 const showPdfPreview = ref(false);
 const pdfUrl = ref(null);
+
+// ============================================================================
+// ESTADO PARA DOCUMENTOS BASE (PASO 1)
+// ============================================================================
+const showModalDocumentosBase = ref(false);
+const guardandoDocumentosBase = ref(false);
+const modalArchivoSolicitud = ref(null);
+const modalArchivoHabilitacion = ref(null);
+
+// Visor Modal Elegante para PDFs en la Misma Página
+const showModalVisorPdf = ref(false);
+const visorPdfUrl = ref('');
+const visorPdfTitulo = ref('');
+const visorPdfSubtitulo = ref('');
+
+const abrirVisorPdf = (titulo, subtitulo, path) => {
+    if (!path) return;
+    visorPdfTitulo.value = titulo;
+    visorPdfSubtitulo.value = subtitulo;
+    visorPdfUrl.value = getStorageUrl(path);
+    showModalVisorPdf.value = true;
+};
+
+const openModalDocumentosBase = () => {
+    modalArchivoSolicitud.value = null;
+    modalArchivoHabilitacion.value = null;
+    showModalDocumentosBase.value = true;
+};
+
+const onModalSolicitudChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            toast.add({ severity: 'error', summary: 'Archivo no válido', detail: 'Debe ser un archivo PDF.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.add({ severity: 'error', summary: 'Archivo muy grande', detail: 'El archivo excede el límite de 10 MB.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        modalArchivoSolicitud.value = file;
+    }
+};
+
+const onModalHabilitacionChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            toast.add({ severity: 'error', summary: 'Archivo no válido', detail: 'Debe ser un archivo PDF.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.add({ severity: 'error', summary: 'Archivo muy grande', detail: 'El archivo excede el límite de 10 MB.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        modalArchivoHabilitacion.value = file;
+    }
+};
+
+const guardarDocumentosBaseModal = async () => {
+    if (!modalArchivoSolicitud.value && !modalArchivoHabilitacion.value) return;
+
+    try {
+        guardandoDocumentosBase.value = true;
+        const formData = new FormData();
+        if (modalArchivoSolicitud.value) {
+            formData.append('solicitud_arrendamiento', modalArchivoSolicitud.value);
+        }
+        if (modalArchivoHabilitacion.value) {
+            formData.append('verificacion_habilitacion', modalArchivoHabilitacion.value);
+        }
+
+        const res = await cotizacionServices.subirDocumentosBase(cotizacion.value.id, formData);
+
+        if (res.data?.solicitud_arrendamiento_path) {
+            cotizacion.value.solicitud_arrendamiento_path = res.data.solicitud_arrendamiento_path;
+        }
+        if (res.data?.verificacion_habilitacion_path) {
+            cotizacion.value.verificacion_habilitacion_path = res.data.verificacion_habilitacion_path;
+        }
+
+        toast.add({
+            severity: 'success',
+            summary: 'Documentos guardados',
+            detail: res.data?.message || 'Los documentos base fueron actualizados correctamente.',
+            life: 5000
+        });
+
+        showModalDocumentosBase.value = false;
+    } catch (e) {
+        console.error('Error al guardar documentos base', e);
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: e.response?.data?.message || 'No se pudieron guardar los documentos.',
+            life: 5000
+        });
+    } finally {
+        guardandoDocumentosBase.value = false;
+    }
+};
 
 // ============================================================================
 // ESTADO PARA CONFIRMACIÓN DE RESERVA

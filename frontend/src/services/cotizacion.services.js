@@ -8,6 +8,11 @@ export default {
         return Api().get(`cotizaciones/${id}`);
     },
     guardar: (datos) => {
+        if (datos instanceof FormData) {
+            return Api().post('cotizaciones', datos, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+        }
         return Api().post('cotizaciones', datos);
     },
     actualizar: (id, datos) => {
@@ -35,5 +40,10 @@ export default {
     },
     confirmarReserva: (id, datos = {}) => {
         return Api().post(`cotizaciones/${id}/confirmar-reserva`, datos);
+    },
+    subirDocumentosBase: (id, formData) => {
+        return Api().post(`cotizaciones/${id}/documentos-base`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
     }
 };

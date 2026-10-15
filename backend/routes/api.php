@@ -88,6 +88,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // CRM
         Route::post('crms', [CrmController::class, 'store'])
             ->middleware('permission:cotizaciones.editar');
+
+        // Documentos base (Solicitud de Arrendamiento y Verificación de Habilitación)
+        Route::post('documentos-base', [CotizacionController::class, 'subirDocumentosBase'])
+            ->middleware('permission:cotizaciones.editar');
     });
 
     // Reuniones — Rutas independientes

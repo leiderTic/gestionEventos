@@ -68,24 +68,38 @@ Para evitar problemas de CORS y permitir que el sistema funcione tanto en desarr
 
 ---
 
-## 5. Usuarios de Prueba y Autenticación
+## 5. Control de Acceso y Roles (RBAC Spatie)
 
-* **Autenticación:** Laravel Sanctum vía Bearer Token en `POST /api/v1/auth/login`.
-* **Seeders:** Seeder `UserSeeder.php` configurado con nombres ficticios bolivianos.
-* **Formato de Clave:** Iniciales del nombre en mayúsculas + `2026!` (ej: `LT2026!`).
-* **Usuarios principales:**
-  * `leider.ticlla` | Clave: `LT2026!`
-  * `justo.colquehuanca` | Clave: `JC2026!`
-  * `diego.condori` | Clave: `DC2026!`
-  * `valentina.choque` | Clave: `VC2026!`
-  * `santiago.vargas` | Clave: `SV2026!`
+* **Autenticación:** Laravel Sanctum vía Bearer Token en `POST /api/v1/auth/login`. El payload de login retorna `user`, `roles` y `permissions`.
+* **Frontend:** Pinia (`stores/auth.js`), directiva `v-can` (`directives/can.js`) y `meta.permission` en rutas Vue.
+* **Usuarios de Prueba (10 usuarios en `UserSeeder.php`):**
+  * Formato de Clave: Iniciales en mayúsculas + `2026!` (ej: `LT2026!`).
+  * `leider.ticlla` | Rol: `Administrador` | Clave: `LT2026!`
+  * `justo.colquehuanca` | Rol: `Tecnico Comercial` | Clave: `JC2026!`
+  * `diego.condori` | Rol: `Tecnico Comercial` | Clave: `DC2026!`
+  * `valentina.choque` | Rol: `Tecnico Comercial` | Clave: `VC2026!`
+  * `santiago.vargas` | Rol: `Tecnico Comercial` | Clave: `SV2026!`
+  * `lucia.mendoza` | Rol: `Tecnico UAF` | Clave: `LM2026!`
+  * `carlos.mamani` | Rol: `Tecnico UAF` | Clave: `CM2026!`
+  * `elena.quispe` | Rol: `Tecnico Legal` | Clave: `EQ2026!`
+  * `rodrigo.flores` | Rol: `Tecnico Legal` | Clave: `RF2026!`
+  * `andrea.salazar` | Rol: `Tecnico Legal` | Clave: `AS2026!`
+* **Reglas de Visibilidad en Cotizaciones (Row-Level Security en `Cotizacion::scopeVisiblePara`):**
+  * `Administrador`: Acceso total (`cotizaciones.ver_todas`) y administración de usuarios/roles (`/admin/usuarios`).
+  * `Tecnico Comercial`: Solo ve sus propias cotizaciones (`cotizaciones.ver_propias`).
+  * `Tecnico UAF`: Solo ve cotizaciones que tienen pagos con boucher (`uaf.ver_con_boucher`) para registrar C21 y factura.
+  * `Tecnico Legal`: Solo ve cotizaciones con 100% de pagos completados (`legal.ver_pagadas`) para contratos e informes legales.
 
 ---
 
 ## 6. Flujo del Módulo Comercial (Reglamento Institucional CFCHM)
 
 El expediente comercial recorre 14 etapas obligatorias:
-1. **En gestión (Paso 1):** Creación de cotización (fechas, temporada alta/baja, espacios con tarifas oficiales, servicios adicionales y clientes).
+1. **En gestión (Paso 1):** Creación de cotización (fechas, temporada alta/baja, espacios con tarifas oficiales, servicios adicionales y clientes) junto con los **Documentos Base del Expediente**:
+   * `solicitud_arrendamiento_path`: Solicitud de Arrendamiento (formulario/borrador llenado por el cliente con fechas, espacios y servicios requeridos).
+   * `verificacion_habilitacion_path`: Formulario de Verificación de Habilitación (certificación administrativa de buen cliente / habilitado).
+   * **Almacenamiento Físico:** `storage/app/public/expedientes/{cotizacion_id}/documentos/` expuesto vía symlink `/storage/expedientes/{id}/documentos/...`.
+   * **Endpoints:** En creación `POST /api/cotizaciones` (`multipart/form-data`), y en actualización posterior `POST /api/cotizaciones/{id}/documentos-base`.
 2. **Confirmación de Reserva (Paso 2 - Art. 40 y 41):** Cierre comercial y bloqueo del espacio.
 3. **Reunión Operativa (Paso 3):** Coordinación con montaje y operaciones.
 4. **Pago Total + Garantía (Paso 4):** Liquidación del 80% y garantía del 20%.

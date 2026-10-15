@@ -84,24 +84,38 @@ const router = createRouter({
 })
 
 // guardia de rutas
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
     const authStore = useAuthStore();
     const token = authStore.token || localStorage.getItem('access_token');
 
-    if (to.meta.requiresAuth) {
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+    const requiresIfAuth = to.matched.some(record => record.meta.requiresIfAuth);
+
+    if (requiresAuth) {
         if (!token) {
             return { name: 'login' };
         }
 
-        // Validación de permisos
-        if (to.meta.permission && !authStore.can(to.meta.permission)) {
+        // Si hay token pero falta el perfil en memoria, sincronizar con backend
+        if (!authStore.user) {
+            try {
+                await authStore.fetchMe();
+            } catch (e) {
+                authStore.logout();
+                return { name: 'login' };
+            }
+        }
+
+        // Validación de permisos en la ruta actual o ancestros
+        const matchedPermission = to.matched.find(record => record.meta.permission)?.meta.permission;
+        if (matchedPermission && !authStore.can(matchedPermission)) {
             return { name: 'dashboard' };
         }
 
         return true;
     }
 
-    if (to.meta.requiresIfAuth && token) {
+    if (requiresIfAuth && token) {
         return { name: 'dashboard' };
     }
 

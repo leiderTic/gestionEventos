@@ -20,6 +20,8 @@ class Cotizacion extends Model
         "vencido",
         "user_id",
         "evento_id",
+        "solicitud_arrendamiento_path",
+        "verificacion_habilitacion_path",
         "monto_tarifas",
         "monto_servicios",
         "monto_total",

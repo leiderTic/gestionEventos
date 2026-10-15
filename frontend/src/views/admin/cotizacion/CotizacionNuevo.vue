@@ -302,6 +302,104 @@
                                 </div>
 
                             </div>
+
+                            <!-- DOCUMENTOS BASE DEL EVENTO (PASO 1) -->
+                            <div class="col-span-12 mt-4 pt-6 border-t border-surface">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i class="pi pi-folder-open text-primary text-xl"></i>
+                                    <span class="font-bold text-surface-900 dark:text-surface-0 text-base lg:text-lg">Documentos Base del Evento</span>
+                                    <span class="text-xs text-muted-color font-medium">(Adjuntos en formato PDF)</span>
+                                </div>
+                                <p class="text-xs text-surface-500 dark:text-surface-400 mb-4">
+                                    Adjunte los formularios físicos digitalizados que respaldan la apertura de esta cotización comercial.
+                                </p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Tarjeta 1: Solicitud de Arrendamiento -->
+                                    <div class="border border-surface-200 dark:border-surface-700 rounded-xl p-4 bg-surface-50/50 dark:bg-surface-900/50 flex flex-col justify-between">
+                                        <div>
+                                            <div class="flex items-start justify-between gap-2 mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                                                        <i class="pi pi-file-edit text-base"></i>
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-sm text-surface-900 dark:text-surface-0 block">Solicitud de Arrendamiento</span>
+                                                        <span class="text-[11px] text-muted-color">Descripción, fechas, espacios y servicios del cliente</span>
+                                                    </div>
+                                                </div>
+                                                <span v-if="archivoSolicitud" class="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <i class="pi pi-check text-[10px]"></i> Cargado
+                                                </span>
+                                            </div>
+
+                                            <!-- Estado sin archivo -->
+                                            <div v-if="!archivoSolicitud" class="mt-3">
+                                                <label class="flex flex-col items-center justify-center border-2 border-dashed border-surface-300 dark:border-surface-600 rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-surface-0 dark:hover:bg-surface-800 transition-colors">
+                                                    <i class="pi pi-cloud-upload text-2xl text-muted-color mb-1"></i>
+                                                    <span class="text-xs font-semibold text-surface-700 dark:text-surface-200">Seleccionar Solicitud (PDF)</span>
+                                                    <span class="text-[10px] text-muted-color mt-0.5">Formato PDF hasta 10 MB</span>
+                                                    <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onSolicitudSelected" />
+                                                </label>
+                                            </div>
+
+                                            <!-- Estado con archivo seleccionado -->
+                                            <div v-else class="mt-3 p-3 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-between gap-3">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    <i class="pi pi-file-pdf text-red-500 text-xl flex-shrink-0"></i>
+                                                    <div class="min-w-0">
+                                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">{{ archivoSolicitud.name }}</p>
+                                                        <p class="text-[10px] text-muted-color m-0">{{ formatFileSize(archivoSolicitud.size) }}</p>
+                                                    </div>
+                                                </div>
+                                                <Button icon="pi pi-trash" text rounded severity="danger" size="small" @click="removeSolicitud" title="Quitar archivo" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tarjeta 2: Verificación de Habilitación -->
+                                    <div class="border border-surface-200 dark:border-surface-700 rounded-xl p-4 bg-surface-50/50 dark:bg-surface-900/50 flex flex-col justify-between">
+                                        <div>
+                                            <div class="flex items-start justify-between gap-2 mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-9 h-9 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                                                        <i class="pi pi-shield text-base"></i>
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-sm text-surface-900 dark:text-surface-0 block">Verificación de Habilitación</span>
+                                                        <span class="text-[11px] text-muted-color">Certificación de buen cliente / habilitado</span>
+                                                    </div>
+                                                </div>
+                                                <span v-if="archivoHabilitacion" class="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <i class="pi pi-check text-[10px]"></i> Cargado
+                                                </span>
+                                            </div>
+
+                                            <!-- Estado sin archivo -->
+                                            <div v-if="!archivoHabilitacion" class="mt-3">
+                                                <label class="flex flex-col items-center justify-center border-2 border-dashed border-surface-300 dark:border-surface-600 rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-surface-0 dark:hover:bg-surface-800 transition-colors">
+                                                    <i class="pi pi-cloud-upload text-2xl text-muted-color mb-1"></i>
+                                                    <span class="text-xs font-semibold text-surface-700 dark:text-surface-200">Seleccionar Habilitación (PDF)</span>
+                                                    <span class="text-[10px] text-muted-color mt-0.5">Formato PDF hasta 10 MB</span>
+                                                    <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onHabilitacionSelected" />
+                                                </label>
+                                            </div>
+
+                                            <!-- Estado con archivo seleccionado -->
+                                            <div v-else class="mt-3 p-3 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-between gap-3">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    <i class="pi pi-file-pdf text-red-500 text-xl flex-shrink-0"></i>
+                                                    <div class="min-w-0">
+                                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">{{ archivoHabilitacion.name }}</p>
+                                                        <p class="text-[10px] text-muted-color m-0">{{ formatFileSize(archivoHabilitacion.size) }}</p>
+                                                    </div>
+                                                </div>
+                                                <Button icon="pi pi-trash" text rounded severity="danger" size="small" @click="removeHabilitacion" title="Quitar archivo" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Controles Inferiores (Pasar al Siguiente Paso) -->
@@ -834,6 +932,10 @@
                             <div class="text-xs text-surface-700 dark:text-surface-300">
                                 <span class="font-bold">Días:</span> {{ conteoTemporadas.total }}
                             </div>
+                            <div v-if="archivoSolicitud || archivoHabilitacion" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                <span class="font-bold">Documentos:</span>
+                                {{ [archivoSolicitud ? 'Solicitud' : null, archivoHabilitacion ? 'Habilitación' : null].filter(Boolean).join(', ') }}
+                            </div>
                         </div>
                     </div>
                 </StepPanel>
@@ -1197,6 +1299,76 @@ const cotizacion = ref({
     espacios: [],        // Arreglo con los espacios agregados y sus configuraciones
     servicios: []
 });
+
+// Documentos Base Paso 1 (PDFs adjuntos)
+const archivoSolicitud = ref(null);
+const archivoHabilitacion = ref(null);
+
+const onSolicitudSelected = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            toast.add({ severity: 'error', summary: 'Archivo no válido', detail: 'La Solicitud de Arrendamiento debe ser un archivo PDF.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.add({ severity: 'error', summary: 'Archivo muy grande', detail: 'El archivo excede el límite de 10 MB.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        archivoSolicitud.value = file;
+    }
+};
+
+const removeSolicitud = () => {
+    archivoSolicitud.value = null;
+};
+
+const onHabilitacionSelected = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            toast.add({ severity: 'error', summary: 'Archivo no válido', detail: 'La Verificación de Habilitación debe ser un archivo PDF.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.add({ severity: 'error', summary: 'Archivo muy grande', detail: 'El archivo excede el límite de 10 MB.', life: 4000 });
+            event.target.value = '';
+            return;
+        }
+        archivoHabilitacion.value = file;
+    }
+};
+
+const removeHabilitacion = () => {
+    archivoHabilitacion.value = null;
+};
+
+const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+const formatDateToYMD = (date) => {
+    if (!date) return null;
+    if (typeof date === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.substring(0, 10);
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? date : d.toISOString().split('T')[0];
+    }
+    if (date instanceof Date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    return date;
+};
 
 
 // ============================================================================
@@ -1746,8 +1918,8 @@ const imprimirCotizacion = () => {
 const buildCotizacionPayload = (entidadId, contactoId, isPreview = false) => {
     const payload = {
         descripcion: cotizacion.value.descripcion || `Cotización para Evento`,
-        fecha_ini:   cotizacion.value.fecha_inicio,
-        fecha_fin:   cotizacion.value.fecha_fin,
+        fecha_ini:   formatDateToYMD(cotizacion.value.fecha_inicio),
+        fecha_fin:   formatDateToYMD(cotizacion.value.fecha_fin || cotizacion.value.fecha_inicio),
         evento_id:   cotizacion.value.tipo_evento, 
         clientes:    [],
         tarifas:     [],
@@ -1885,8 +2057,29 @@ const guardarCotizacionCompleta = async () => {
             payload.descripcion = `Cotización para ${entidadObj.nombre}`;
         }
 
+        // Construir FormData si hay documentos adjuntos
+        let requestData = payload;
+        if (archivoSolicitud.value || archivoHabilitacion.value) {
+            const formData = new FormData();
+            formData.append('descripcion', payload.descripcion);
+            formData.append('fecha_ini', payload.fecha_ini);
+            formData.append('fecha_fin', payload.fecha_fin);
+            formData.append('evento_id', payload.evento_id);
+            formData.append('clientes', JSON.stringify(payload.clientes));
+            formData.append('tarifas', JSON.stringify(payload.tarifas));
+            formData.append('servicios', JSON.stringify(payload.servicios));
+
+            if (archivoSolicitud.value) {
+                formData.append('solicitud_arrendamiento', archivoSolicitud.value);
+            }
+            if (archivoHabilitacion.value) {
+                formData.append('verificacion_habilitacion', archivoHabilitacion.value);
+            }
+            requestData = formData;
+        }
+
         // Guardamos la cotización completa en la base de datos
-        const response = await cotizacionServices.guardar(payload);
+        const response = await cotizacionServices.guardar(requestData);
 
         // Termina el request
         isSubmitting.value = false;
