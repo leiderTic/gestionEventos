@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             ClienteSeeder::class,
             EventoSeeder::class,
             ServicioSeeder::class,
+            PlantillaDocumentoSeeder::class,
         ]);
     }
 }

@@ -166,12 +166,54 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
 ## 9. Tareas en Curso y Puntos de Atención
 
 1. **Permisos de DomPDF (Generación de PDF en Backend):**
-   * Al desplegar en servidores nuevos, DomPDF requiere la carpeta `storage/fonts` y permisos de escritura para `www-data`:
+   * DomPDF requiere la carpeta `storage/fonts` con permisos de escritura para el usuario del servidor web (`www-data`). Al llamar a `setOptions([...])` en Laravel-DomPDF, es mandatorio incluir siempre:
+     ```php
+     'font_dir' => storage_path('fonts'),
+     'font_cache' => storage_path('fonts'),
+     ```
+     pues de lo contrario `setOptions()` sobreescribe la configuración y apunta por defecto al directorio interno `vendor/dompdf/dompdf/lib/fonts` provocando error `fopen() Permission denied`.
+   * Comandos de permisos en el contenedor Docker:
      ```bash
      docker exec -it gestion_backend_laravel mkdir -p storage/fonts
      docker exec -it gestion_backend_laravel chown -R www-data:www-data storage bootstrap/cache
      docker exec -it gestion_backend_laravel chmod -R 777 storage bootstrap/cache
+     docker exec -it gestion_backend_laravel chmod -R 777 vendor/dompdf/dompdf/lib/fonts
      ```
 2. **Cierre del Modal de Confirmación de Reserva:**
    * Crear `frontend/src/services/reunion.services.js` para llamar a `POST /api/cotizaciones/{id}/reuniones`.
    * En `CotizacionDetalle.vue`, al confirmar la reserva, llamar al servicio de reunión y actualizar la cotización a `paso: 2` para avanzar el stepper visual.
+
+---
+
+## 10. Sistema de Plantillas Base Institucionales para Documentos y Cartas (DomPDF)
+
+* **Plantilla Maestra:** `backend/resources/views/documentos/plantilla_base.blade.php`
+  * Las cartas o notas hijas extienden esta plantilla usando `@extends('documentos.plantilla_base')` y definen su contenido dentro de `@section('contenido')`.
+* **Activos Institucionales:**
+  * Imágenes: `backend/public/image/plantilla/`
+    * `logo-ucpp.jpg`: Encabezado superior izquierdo (Escudo de Bolivia + UCPP).
+    * `fondo-agua.png`: Marca de agua centrada en el fondo (Escudo de Bolivia atenuado).
+    * `logo-mefp.png`: Pie de página inferior izquierdo (Ministerio de Economía con línea tricolor).
+    * `info-oficina.png`: Pie de página inferior derecho (Chuquiago Marka Oficina Central).
+  * Fuentes Tipográficas: `backend/public/fonts/`
+    * `CenturyGothic.ttf`, `CenturyGothic-Bold.ttf`, `CenturyGothic-Italic.ttf`, `CenturyGothic-BoldItalic.ttf` (fuentes TrueType que garantizan renderizado perfecto en DomPDF sin caracteres corruptos ni advertencias).
+* **Parámetros Oficiales:**
+  * Tamaño: Carta (`letter`).
+  * Márgenes de página: Superior `3,76 cm`, Inferior `4,01 cm`, Izquierdo `2,54 cm`, Derecho `2,54 cm`.
+  * Tipografía: Century Gothic tamaño 11pt.
+  * Opciones requeridas en DomPDF: `isPhpEnabled => true` (indispensable para numeración dinámica `Página X de Y`).
+* **Documentos Implementados:**
+  1. **Respuesta a Solicitud de Cotización por Arrendamiento de Espacios:**
+     * Plantilla Blade: `backend/resources/views/documentos/respuesta_arrendamiento.blade.php` (formato exacto de 3 páginas con CITE, QR, firmas institucionales, cuentas Banco Unión).
+     * Rutas API (`backend/routes/api.php`):
+       * `GET /api/cotizaciones/{id}/documentos/respuesta-arrendamiento/formulario`
+       * `POST /api/cotizaciones/{id}/documentos/respuesta-arrendamiento/preview`
+       * `POST /api/cotizaciones/{id}/documentos/respuesta-arrendamiento`
+       * `GET /api/cotizaciones/{id}/documentos/{documentoId}/pdf`
+     * Servicio Frontend: `frontend/src/services/cotizacion.services.js` (`getFormularioRespuestaArrendamiento`, `previewRespuestaArrendamiento`, `guardarRespuestaArrendamiento`, `getRespuestaArrendamientoPdf`).
+     * Componente Vista: `frontend/src/views/admin/cotizacion/CotizacionDetalle.vue`
+       * Tarjeta en sección de documentos con estado de emisión, CITE y acceso rápido a PDF o edición.
+       * Botón en panel de acciones (Paso 1 y posteriores).
+       * Modal de formulario (`showModalRespuestaArrendamiento`): Fecha, CITE (prefijo `MEFP/UCPP/ UCFCM/NE N°`), Solicitud cliente (`Del`), Plazo, Teléfono, Correo, HR, Moscas y sección desplegable de datos calculados del evento.
+       * Modal visor integrado (`showModalVisorPdf`): permite previsualizar el PDF en la misma pantalla sin abrir pestañas externas.
+

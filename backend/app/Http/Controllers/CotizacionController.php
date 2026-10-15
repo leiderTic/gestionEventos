@@ -174,14 +174,15 @@ class CotizacionController extends Controller
         $cotizacion = Cotizacion::with([
             'user',
             'evento',
-            'clientes',
+            'clientes.institucion',
             'servicios',
             'tarifas.evento',
             'tarifas.espacio',
             'pagos.banco',
             'respaldos.tipoRespaldo',
             'reuniones.modalidad',
-            'reserva.user'
+            'reserva.user',
+            'documentos'
         ])->visiblePara(Auth::user())->find($id);
 
         if (!$cotizacion) {

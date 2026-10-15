@@ -103,9 +103,9 @@
                         </div>
                     </div>
 
-                    <!-- DOCUMENTOS BASE DE LA COTIZACIÓN (PASO 1) -->
-                    <div class="mb-6 p-4 rounded-xl bg-surface-50 dark:bg-surface-900/60 border border-surface-200 dark:border-surface-800">
-                        <div class="flex items-center justify-between mb-3">
+                    <!-- DOCUMENTOS BASE Y NOTAS INSTITUCIONALES (PASO 1) -->
+                    <div class="mb-6 p-4 rounded-xl bg-surface-50 dark:bg-surface-900/60 border border-surface-200 dark:border-surface-800 space-y-3">
+                        <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2 text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wider">
                                 <i class="pi pi-paperclip text-primary"></i>
                                 <span>Documentos Base de la Cotización</span>
@@ -163,6 +163,54 @@
                         <div v-else class="flex items-center gap-2 text-xs text-muted-color py-1">
                             <i class="pi pi-info-circle text-surface-400"></i>
                             <span>No se han adjuntado la Solicitud de Arrendamiento ni la Verificación de Habilitación aún.</span>
+                        </div>
+
+                        <!-- RESPUESTA A SOLICITUD DE COTIZACIÓN POR ARRENDAMIENTO -->
+                        <div class="pt-2 border-t border-surface-200 dark:border-surface-700">
+                            <div v-if="docRespuestaArrendamiento"
+                                class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-sky-200 dark:border-sky-800/60 shadow-xs gap-3">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 flex items-center justify-center flex-shrink-0">
+                                        <i class="pi pi-file-pdf text-sm"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">Respuesta Cotización Arrendamiento</p>
+                                            <span class="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
+                                                CITE: {{ docRespuestaArrendamiento.cite }}
+                                            </span>
+                                        </div>
+                                        <p class="text-[10px] text-muted-color m-0">
+                                            Emitido: {{ formatDateShort(docRespuestaArrendamiento.fecha) }} · Destinatario: {{ docRespuestaArrendamiento.snapshot_datos?.destinatario_nombre || 'Cliente' }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 self-end sm:self-center">
+                                    <Button label="Ver PDF" icon="pi pi-eye" size="small"
+                                        class="!text-xs !py-1.5 !px-3 font-bold !bg-sky-50 hover:!bg-sky-100 !text-sky-800 dark:!bg-sky-950/40 dark:!text-sky-300 !border-none flex items-center gap-1.5 shadow-none"
+                                        @click="abrirVisorPdf('Respuesta a Solicitud de Cotización por Arrendamiento', 'CITE: ' + (docRespuestaArrendamiento.cite || 'S/N'), docRespuestaArrendamiento.pdf_path)" />
+                                    <Button label="Editar" icon="pi pi-pencil" size="small" text
+                                        class="!text-xs !py-1.5 !px-2 font-bold text-surface-600 hover:text-primary"
+                                        @click="abrirModalRespuestaArrendamiento" />
+                                </div>
+                            </div>
+
+                            <div v-else
+                                class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-dashed border-surface-300 dark:border-surface-700 gap-3">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+                                        <i class="pi pi-exclamation-circle text-sm"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">Respuesta a Solicitud por Arrendamiento</p>
+                                        <p class="text-[10px] text-muted-color m-0">Nota oficial CITE pendiente de emisión (requerida previa a confirmar reserva)</p>
+                                    </div>
+                                </div>
+                                <Button label="Generar Documento" icon="pi pi-file-edit" size="small"
+                                    class="!text-xs !py-1.5 !px-3 font-bold !bg-primary-50 hover:!bg-primary-100 !text-primary dark:!bg-primary-950/40 dark:!text-primary-300 !border-none flex items-center gap-1.5 shadow-none self-end sm:self-center"
+                                    :loading="cargandoFormRespuesta"
+                                    @click="abrirModalRespuestaArrendamiento" />
+                            </div>
                         </div>
                     </div>
 
@@ -267,6 +315,12 @@
                             class="w-full font-bold shadow-sm !py-2.5 !bg-white hover:!bg-surface-50 dark:!bg-surface-800"
                             @click="reimprimirCotizacion" :loading="printing" />
 
+                        <button type="button" @click="abrirModalRespuestaArrendamiento"
+                            class="w-full bg-[#0369a1] hover:bg-[#0284c7] text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+                            <i class="pi pi-file-edit text-sm"></i>
+                            <span>{{ docRespuestaArrendamiento ? 'Ver / Editar Respuesta Arrendamiento' : 'Respuesta Cotización Arrendamiento' }}</span>
+                        </button>
+
                         <button type="button" @click="abrirFichaReserva"
                             class="w-full bg-[#581c87] hover:bg-[#4a148c] text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
                             <i class="pi pi-id-card text-sm"></i>
@@ -282,8 +336,18 @@
                     <div v-else class="mt-6 flex flex-col gap-3">
                         <Button label="Reimprimir" icon="pi pi-print" severity="secondary" outlined
                             class="w-full font-bold shadow-sm" @click="reimprimirCotizacion" :loading="printing" />
+
+                        <Button :label="docRespuestaArrendamiento ? 'Ver / Editar Respuesta Arrendamiento' : 'Generar Respuesta Arrendamiento'"
+                            icon="pi pi-file-edit"
+                            :severity="docRespuestaArrendamiento ? 'info' : 'primary'"
+                            :outlined="!!docRespuestaArrendamiento"
+                            class="w-full font-bold shadow-sm"
+                            @click="abrirModalRespuestaArrendamiento"
+                            :loading="cargandoFormRespuesta" />
+
                         <Button label="Gestionar Cotización" icon="pi pi-pencil" severity="warning"
                             class="w-full font-bold shadow-sm" @click="abrirModalEdicion" />
+
                         <Button :label="'Confirmar Reserva / Registrar Anticipo'" icon="pi pi-check-square"
                             severity="success" class="w-full font-bold shadow-sm" @click="abrirModalReserva" />
                     </div>
@@ -1519,6 +1583,228 @@
         </template>
     </Dialog>
 
+    <!-- MODAL: RESPUESTA A SOLICITUD DE COTIZACIÓN POR ARRENDAMIENTO DE ESPACIOS -->
+    <Dialog v-model:visible="showModalRespuestaArrendamiento" modal
+        :style="{ width: '56rem', maxWidth: '96vw' }"
+        :breakpoints="{ '960px': '85vw', '640px': '98vw' }">
+        <template #header>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 flex items-center justify-center flex-shrink-0">
+                    <i class="pi pi-file-edit text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-surface-900 dark:text-surface-0 m-0 leading-tight">
+                        Respuesta a Solicitud de Cotización por Arrendamiento
+                    </h3>
+                    <p class="text-xs text-muted-color m-0 mt-0.5">
+                        Generación de nota institucional oficial con formato Century Gothic y márgenes reglamentarios
+                    </p>
+                </div>
+            </div>
+        </template>
+
+        <div class="space-y-5 pt-2">
+            <!-- Banner informativo -->
+            <div class="flex items-start gap-3 p-3.5 rounded-xl bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800 text-xs text-sky-900 dark:text-sky-200">
+                <i class="pi pi-info-circle text-sky-600 dark:text-sky-400 mt-0.5 text-base flex-shrink-0"></i>
+                <div class="leading-relaxed">
+                    <span class="font-bold">Emisión previa obligatoria:</span> Este documento institucional responde formalmente a la solicitud del cliente detallando las condiciones del arrendamiento, plazos de pago y cuentas bancarias oficiales antes de proceder a la confirmación de la reserva.
+                </div>
+            </div>
+
+            <!-- SECCIÓN 1: DATOS DE LA NOTA (FORMULARIO PRINCIPAL) -->
+            <div class="p-4 rounded-xl bg-surface-50 dark:bg-surface-900/50 border border-surface-200 dark:border-surface-700 space-y-4">
+                <div class="flex items-center justify-between border-b border-surface-200 dark:border-surface-700 pb-2">
+                    <span class="text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="pi pi-file text-primary"></i> Datos de la Nota Institucional
+                    </span>
+                    <span class="text-[11px] text-muted-color">Campos requeridos para la emisión</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Fecha de la Nota -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            Fecha de la Nota <span class="text-red-500">*</span>
+                        </label>
+                        <DatePicker v-model="formRespuesta.fecha" dateFormat="yy-mm-dd" showIcon fluid
+                            placeholder="aaaa-mm-dd" />
+                        <p class="text-[11px] text-muted-color mt-1">Fecha con la que se emitirá la nota oficial.</p>
+                    </div>
+
+                    <!-- CITE (Número) -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            CITE / Número de Nota <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex items-stretch rounded-lg overflow-hidden border border-surface-300 dark:border-surface-600 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
+                            <span class="bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 px-3 flex items-center text-xs font-semibold select-none border-r border-surface-300 dark:border-surface-600">
+                                {{ formRespuesta.prefijo_cite || 'MEFP/UCPP/ UCFCM/NE N°' }}
+                            </span>
+                            <InputText v-model="formRespuesta.cite" class="!border-none !ring-0 flex-1 text-sm font-bold"
+                                placeholder="001" />
+                            <span class="bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400 px-3 flex items-center text-xs font-semibold select-none border-l border-surface-300 dark:border-surface-600">
+                                /{{ formRespuesta.anio }}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-muted-color mt-1">Número correlativo asignado a la nota.</p>
+                    </div>
+
+                    <!-- Del (Fecha solicitud del cliente) -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            En atención a solicitud de fecha (Del)
+                        </label>
+                        <DatePicker v-model="formRespuesta.del" dateFormat="yy-mm-dd" showIcon fluid
+                            placeholder="Opcional: aaaa-mm-dd" />
+                        <p class="text-[11px] text-muted-color mt-1">Fecha de la nota o solicitud presentada por el cliente.</p>
+                    </div>
+
+                    <!-- Plazo de confirmación / anticipo -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            Plazo de Anticipo <span class="text-red-500">*</span>
+                        </label>
+                        <InputText v-model="formRespuesta.plazo" fluid placeholder="tres (3) días hábiles" />
+                        <p class="text-[11px] text-muted-color mt-1">Tiempo otorgado para confirmar y depositar el anticipo.</p>
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            Teléfono de Contacto
+                        </label>
+                        <InputText v-model="formRespuesta.telefono" fluid placeholder="77240445" />
+                        <p class="text-[11px] text-muted-color mt-1">Número de coordinación de la UCFCM.</p>
+                    </div>
+
+                    <!-- Correo electrónico -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            Correo Electrónico
+                        </label>
+                        <InputText v-model="formRespuesta.correo_electronico" fluid placeholder="correo@economiayfinanzas.gob.bo" />
+                        <p class="text-[11px] text-muted-color mt-1">Correo institucional de referencia.</p>
+                    </div>
+
+                    <!-- Hoja de Ruta -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            Hoja de Ruta (HR)
+                        </label>
+                        <InputText v-model="formRespuesta.hoja_ruta" fluid placeholder="Ej: HR: 12345/2026" />
+                        <p class="text-[11px] text-muted-color mt-1">Hoja de ruta institucional (pie de página).</p>
+                    </div>
+
+                    <!-- Moscas / Iniciales -->
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1.5">
+                            Moscas / Iniciales
+                        </label>
+                        <InputText v-model="formRespuesta.moscas" fluid placeholder="RMRR/JLJC/HABB" />
+                        <p class="text-[11px] text-muted-color mt-1">Iniciales del personal que elaboró y revisó la nota.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: DATOS DEL DESTINATARIO Y EVENTO (CALCULADOS / EDITABLES) -->
+            <div class="border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden bg-white dark:bg-surface-900 shadow-xs">
+                <button type="button" @click="seccionDatosEventoColapsada = !seccionDatosEventoColapsada"
+                    class="w-full p-3.5 flex items-center justify-between text-left hover:bg-surface-50 dark:hover:bg-surface-800/60 transition-colors">
+                    <div class="flex items-center gap-2.5">
+                        <i class="pi pi-user-edit text-primary text-sm"></i>
+                        <div>
+                            <span class="text-xs font-bold text-surface-800 dark:text-surface-200 uppercase tracking-wide">
+                                Destinatario y Datos del Evento
+                            </span>
+                            <span class="ml-2 text-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary dark:text-primary-300 font-semibold px-2 py-0.5 rounded-full">
+                                Autocompletado del sistema
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-xs text-muted-color">
+                        <span>{{ seccionDatosEventoColapsada ? 'Mostrar y editar' : 'Ocultar' }}</span>
+                        <i :class="['pi text-xs transition-transform', seccionDatosEventoColapsada ? 'pi-chevron-down' : 'pi-chevron-up']"></i>
+                    </div>
+                </button>
+
+                <div v-show="!seccionDatosEventoColapsada" class="p-4 border-t border-surface-200 dark:border-surface-700 bg-surface-50/50 dark:bg-surface-900/30 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                                Destinatario (Señor/a)
+                            </label>
+                            <InputText v-model="formRespuesta.destinatario_nombre" fluid placeholder="Nombre del contacto o cliente" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                                Cargo e Institución
+                            </label>
+                            <InputText v-model="formRespuesta.destinatario_cargo_institucion" fluid placeholder="ENCARGADO - NOMBRE INSTITUCION" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                            Nombre del Evento
+                        </label>
+                        <InputText v-model="formRespuesta.evento_nombre" fluid placeholder="Denominación del evento" />
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                                Fechas del Evento
+                            </label>
+                            <InputText v-model="formRespuesta.fechas_evento_texto" fluid placeholder="del ... al ... de ... de ..." />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                                Fecha de Montaje (1 día antes)
+                            </label>
+                            <InputText v-model="formRespuesta.fecha_montaje_texto" fluid placeholder="... de ... de ..." />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                                Fecha de Desmontaje (1 día después)
+                            </label>
+                            <InputText v-model="formRespuesta.fecha_desmontaje_texto" fluid placeholder="... de ... de ..." />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                            Espacios Arrendados
+                        </label>
+                        <InputText v-model="formRespuesta.espacios_texto" fluid placeholder="Auditorio Illimani, Sala VIP, etc." />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <template #footer>
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-surface-200 dark:border-surface-700 w-full">
+                <div>
+                    <span v-if="docRespuestaArrendamiento" class="text-xs text-muted-color flex items-center gap-1.5">
+                        <i class="pi pi-history text-primary"></i>
+                        Última emisión registrada: <b class="text-surface-800 dark:text-surface-200">{{ docRespuestaArrendamiento.cite }}</b> ({{ formatDateShort(docRespuestaArrendamiento.fecha) }})
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <Button label="Cancelar" icon="pi pi-times" text severity="secondary" @click="showModalRespuestaArrendamiento = false" />
+                    
+                    <Button label="Vista Previa PDF" icon="pi pi-eye" severity="info" outlined
+                        :loading="cargandoPreviewRespuesta"
+                        @click="generarVistaPreviaRespuesta" />
+
+                    <Button label="Guardar y Emitir PDF" icon="pi pi-check" severity="primary"
+                        :loading="guardandoRespuesta"
+                        @click="guardarRespuestaArrendamientoModal" />
+                </div>
+            </div>
+        </template>
+    </Dialog>
+
     <!-- MODAL ELEGANTE: VISUALIZACIÓN DE DOCUMENTO PDF EN LA PÁGINA -->
     <Dialog v-model:visible="showModalVisorPdf" modal :showHeader="false"
         class="!p-0 !border-none !overflow-hidden max-w-[1200px]" :style="{ width: '92vw' }"
@@ -1703,6 +1989,184 @@ const guardarDocumentosBaseModal = async () => {
         });
     } finally {
         guardandoDocumentosBase.value = false;
+    }
+};
+
+// ============================================================================
+// ESTADO Y MÉTODOS PARA RESPUESTA A SOLICITUD DE COTIZACIÓN POR ARRENDAMIENTO
+// ============================================================================
+const showModalRespuestaArrendamiento = ref(false);
+const cargandoFormRespuesta = ref(false);
+const cargandoPreviewRespuesta = ref(false);
+const guardandoRespuesta = ref(false);
+const seccionDatosEventoColapsada = ref(true);
+
+const formRespuesta = reactive({
+    fecha: new Date(),
+    cite: '',
+    del: null,
+    plazo: 'tres (3) días hábiles',
+    telefono: '77240445',
+    correo_electronico: 'heidy.burgoa@economiayfinanzas.gob.bo',
+    hoja_ruta: '',
+    moscas: 'RMRR/JLJC/HABB',
+    destinatario_nombre: '',
+    destinatario_cargo_institucion: '',
+    evento_nombre: '',
+    fechas_evento_texto: '',
+    fecha_montaje_texto: '',
+    fecha_desmontaje_texto: '',
+    espacios_texto: '',
+    prefijo_cite: 'MEFP/UCPP/ UCFCM/NE N°',
+    anio: new Date().getFullYear(),
+});
+
+const docRespuestaArrendamiento = computed(() => {
+    if (!cotizacion.value || !cotizacion.value.documentos) return null;
+    return cotizacion.value.documentos.find(d => d.codigo_tipo === 'RESPUESTA_ARRENDAMIENTO') || null;
+});
+
+const formatLocalDate = (date) => {
+    if (!date) return '';
+    if (typeof date === 'string') {
+        return date.includes('T') ? date.split('T')[0] : date;
+    }
+    if (date instanceof Date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    return '';
+};
+
+const abrirModalRespuestaArrendamiento = async () => {
+    if (!cotizacion.value) return;
+    try {
+        cargandoFormRespuesta.value = true;
+        const res = await cotizacionServices.getFormularioRespuestaArrendamiento(cotizacion.value.id);
+        const data = res.data.valores_defecto;
+
+        formRespuesta.fecha = data.fecha ? new Date(data.fecha + 'T12:00:00') : new Date();
+        formRespuesta.cite = data.cite || '';
+        formRespuesta.del = data.del ? new Date(data.del + 'T12:00:00') : null;
+        formRespuesta.plazo = data.plazo || 'tres (3) días hábiles';
+        formRespuesta.telefono = data.telefono || '77240445';
+        formRespuesta.correo_electronico = data.correo_electronico || 'heidy.burgoa@economiayfinanzas.gob.bo';
+        formRespuesta.hoja_ruta = data.hoja_ruta || '';
+        formRespuesta.moscas = data.moscas || 'RMRR/JLJC/HABB';
+
+        formRespuesta.destinatario_nombre = data.destinatario_nombre || '';
+        formRespuesta.destinatario_cargo_institucion = data.destinatario_cargo_institucion || '';
+        formRespuesta.evento_nombre = data.evento_nombre || '';
+        formRespuesta.fechas_evento_texto = data.fechas_evento_texto || '';
+        formRespuesta.fecha_montaje_texto = data.fecha_montaje_texto || '';
+        formRespuesta.fecha_desmontaje_texto = data.fecha_desmontaje_texto || '';
+        formRespuesta.espacios_texto = data.espacios_texto || '';
+        formRespuesta.prefijo_cite = data.prefijo_cite || 'MEFP/UCPP/ UCFCM/NE N°';
+        formRespuesta.anio = formRespuesta.fecha ? formRespuesta.fecha.getFullYear() : new Date().getFullYear();
+
+        showModalRespuestaArrendamiento.value = true;
+    } catch (e) {
+        console.error('Error al cargar formulario de respuesta', e);
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'No se pudieron cargar los datos del formulario de respuesta.',
+            life: 4000
+        });
+    } finally {
+        cargandoFormRespuesta.value = false;
+    }
+};
+
+const prepararPayloadRespuesta = () => {
+    return {
+        fecha: formatLocalDate(formRespuesta.fecha),
+        cite: formRespuesta.cite ? String(formRespuesta.cite).trim() : '',
+        del: formRespuesta.del ? formatLocalDate(formRespuesta.del) : null,
+        plazo: formRespuesta.plazo ? String(formRespuesta.plazo).trim() : 'tres (3) días hábiles',
+        telefono: formRespuesta.telefono,
+        correo_electronico: formRespuesta.correo_electronico,
+        hoja_ruta: formRespuesta.hoja_ruta,
+        moscas: formRespuesta.moscas,
+        destinatario_nombre: formRespuesta.destinatario_nombre,
+        destinatario_cargo_institucion: formRespuesta.destinatario_cargo_institucion,
+        evento_nombre: formRespuesta.evento_nombre,
+        fechas_evento_texto: formRespuesta.fechas_evento_texto,
+        fecha_montaje_texto: formRespuesta.fecha_montaje_texto,
+        fecha_desmontaje_texto: formRespuesta.fecha_desmontaje_texto,
+        espacios_texto: formRespuesta.espacios_texto,
+    };
+};
+
+const generarVistaPreviaRespuesta = async () => {
+    if (!formRespuesta.cite) {
+        toast.add({
+            severity: 'warn',
+            summary: 'CITE requerido',
+            detail: 'Por favor ingrese el número correlativo de CITE para generar la vista previa.',
+            life: 4000
+        });
+        return;
+    }
+    try {
+        cargandoPreviewRespuesta.value = true;
+        const payload = prepararPayloadRespuesta();
+        const response = await cotizacionServices.previewRespuestaArrendamiento(cotizacion.value.id, payload);
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        abrirVisorPdf(
+            'Vista Previa: Respuesta a Solicitud de Cotización por Arrendamiento',
+            `CITE: ${formRespuesta.prefijo_cite || 'MEFP/UCPP/ UCFCM/NE N°'} ${formRespuesta.cite}/${formRespuesta.anio}`,
+            blobUrl
+        );
+    } catch (e) {
+        console.error('Error al generar vista previa', e);
+        const msg = e.response?.data?.message || 'No se pudo generar la vista previa del documento.';
+        toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 5000 });
+    } finally {
+        cargandoPreviewRespuesta.value = false;
+    }
+};
+
+const guardarRespuestaArrendamientoModal = async () => {
+    if (!formRespuesta.cite) {
+        toast.add({
+            severity: 'warn',
+            summary: 'CITE requerido',
+            detail: 'Por favor ingrese el número correlativo de CITE antes de guardar.',
+            life: 4000
+        });
+        return;
+    }
+    if (!formRespuesta.fecha) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Fecha requerida',
+            detail: 'Por favor seleccione la fecha de la nota.',
+            life: 4000
+        });
+        return;
+    }
+    try {
+        guardandoRespuesta.value = true;
+        const payload = prepararPayloadRespuesta();
+        const res = await cotizacionServices.guardarRespuestaArrendamiento(cotizacion.value.id, payload);
+        toast.add({
+            severity: 'success',
+            summary: 'Documento Emitido',
+            detail: res.data?.message || 'La nota de respuesta a solicitud de arrendamiento fue generada y guardada con éxito.',
+            life: 5000
+        });
+        showModalRespuestaArrendamiento.value = false;
+        await fetchCotizacion();
+    } catch (e) {
+        console.error('Error al guardar documento de respuesta', e);
+        const msg = e.response?.data?.message || 'Error al guardar y emitir el documento.';
+        toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 5000 });
+    } finally {
+        guardandoRespuesta.value = false;
     }
 };
 
@@ -2057,7 +2521,7 @@ const resumenAcuerdos = ref('');
 
 const getStorageUrl = (path) => {
     if (!path) return '';
-    if (path.startsWith('http')) return path;
+    if (path.startsWith('http') || path.startsWith('blob:')) return path;
     const host = typeof window !== 'undefined' && window.location ? window.location.hostname : 'localhost';
     return `http://${host}:8081/storage/${path}`;
 };

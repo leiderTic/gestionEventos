@@ -72,6 +72,11 @@ class Cotizacion extends Model
                     ->withTimestamps();
     }
 
+    public function documentos()
+    {
+        return $this->hasMany(CotizacionDocumento::class, 'cotizacion_id');
+    }
+
     /**
      * Calcula los montos sin persistirlos.
      * Útil para vistas previas o auditoría previa al guardado.

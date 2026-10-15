@@ -21,6 +21,7 @@ use App\Http\Controllers\ModalidadController;
 use App\Http\Controllers\TipoCrmController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DocumentoCotizacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/v1/auth')->group(function () {
@@ -92,6 +93,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Documentos base (Solicitud de Arrendamiento y Verificación de Habilitación)
         Route::post('documentos-base', [CotizacionController::class, 'subirDocumentosBase'])
             ->middleware('permission:cotizaciones.editar');
+
+        // Documentos de Respuesta a Cotización
+        Route::get('documentos/respuesta-arrendamiento/formulario', [DocumentoCotizacionController::class, 'formularioRespuestaArrendamiento']);
+        Route::post('documentos/respuesta-arrendamiento/preview', [DocumentoCotizacionController::class, 'previewRespuestaArrendamiento']);
+        Route::post('documentos/respuesta-arrendamiento', [DocumentoCotizacionController::class, 'guardarRespuestaArrendamiento'])
+            ->middleware('permission:cotizaciones.editar');
+        Route::get('documentos/{documentoId}/pdf', [DocumentoCotizacionController::class, 'verPdf']);
     });
 
     // Reuniones — Rutas independientes

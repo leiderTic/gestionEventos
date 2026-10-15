@@ -1,0 +1,8 @@
+{
+    "century gothic": {
+        "normal": "\/var\/www\/html\/storage\/fonts\/century_gothic_normal_f2f380a49807da6fad7f49098faafefb",
+        "bold": "\/var\/www\/html\/storage\/fonts\/century_gothic_bold_b28a0a9d01acb15a10ba0e6eec852b43",
+        "italic": "\/var\/www\/html\/storage\/fonts\/century_gothic_italic_1323ad567f67105ada4539b449db2c1d",
+        "bold_italic": "century_gothic_bold_italic_21605a08478d5233c78f22ccba80617f"
+    }
+}

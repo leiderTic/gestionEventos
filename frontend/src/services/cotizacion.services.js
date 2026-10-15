@@ -45,5 +45,17 @@ export default {
         return Api().post(`cotizaciones/${id}/documentos-base`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+    },
+    getFormularioRespuestaArrendamiento: (id) => {
+        return Api().get(`cotizaciones/${id}/documentos/respuesta-arrendamiento/formulario`);
+    },
+    previewRespuestaArrendamiento: (id, datos) => {
+        return Api().post(`cotizaciones/${id}/documentos/respuesta-arrendamiento/preview`, datos, { responseType: 'blob' });
+    },
+    guardarRespuestaArrendamiento: (id, datos) => {
+        return Api().post(`cotizaciones/${id}/documentos/respuesta-arrendamiento`, datos);
+    },
+    getRespuestaArrendamientoPdf: (id, documentoId) => {
+        return Api().get(`cotizaciones/${id}/documentos/${documentoId}/pdf`, { responseType: 'blob' });
     }
 };
