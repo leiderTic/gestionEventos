@@ -15,23 +15,56 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class DocumentoCotizacionController extends Controller
 {
     /**
-     * Obtiene los datos iniciales y valores por defecto para el formulario
-     * de Respuesta a Solicitud de Cotización por Arrendamiento.
+     * Mapa de configuración por tipo de documento oficial.
      */
-    public function formularioRespuestaArrendamiento($cotizacionId)
+    private const TIPOS_DOCUMENTO = [
+        'RESPUESTA_ARRENDAMIENTO' => [
+            'vista' => 'documentos.respuesta_arrendamiento',
+            'prefijo_archivo' => 'respuesta_arrendamiento',
+            'mensaje_exito' => 'Documento de Respuesta a Solicitud de Arrendamiento generado exitosamente.',
+            'qr_titulo' => 'RESPUESTA COTIZACION ARRENDAMIENTO',
+        ],
+        'RESPUESTA_SERVICIOS_ADICIONALES' => [
+            'vista' => 'documentos.respuesta_servicios_adicionales',
+            'prefijo_archivo' => 'respuesta_servicios_adicionales',
+            'mensaje_exito' => 'Documento de Respuesta a Solicitud de Servicios Adicionales generado exitosamente.',
+            'qr_titulo' => 'RESPUESTA SERVICIOS ADICIONALES',
+        ],
+    ];
+
+    /**
+     * Resuelve el código interno a partir del slug de ruta o código directo.
+     */
+    private function resolverCodigoTipo(string $tipo): string
     {
+        return match (strtolower($tipo)) {
+            'respuesta-arrendamiento', 'respuesta_arrendamiento' => 'RESPUESTA_ARRENDAMIENTO',
+            'respuesta-servicios-adicionales', 'respuesta_servicios_adicionales' => 'RESPUESTA_SERVICIOS_ADICIONALES',
+            default => abort(404, 'Tipo de documento no soportado.'),
+        };
+    }
+
+    /**
+     * Obtiene los datos iniciales y valores por defecto para el formulario
+     * de cualquier documento de respuesta a cotización (Arrendamiento o Servicios Adicionales).
+     */
+    public function formularioPorTipo($cotizacionId, string $tipo)
+    {
+        $codigoTipo = $this->resolverCodigoTipo($tipo);
+
         $cotizacion = Cotizacion::with([
             'evento',
             'clientes.institucion',
             'tarifas.espacio',
+            'servicios',
         ])->findOrFail($cotizacionId);
 
-        $plantilla = PlantillaDocumento::where('codigo', 'RESPUESTA_ARRENDAMIENTO')->first();
+        $plantilla = PlantillaDocumento::where('codigo', $codigoTipo)->first();
 
         // 1. Destinatario
         $cliente = $cotizacion->clientes->first();
         $destinatarioNombre = $cliente ? $cliente->nombre : 'CLIENTE';
-        
+
         $destinatarioCargoInstitucion = 'ENCARGADO';
         if ($cliente && $cliente->institucion) {
             $destinatarioCargoInstitucion = 'ENCARGADO - ' . mb_strtoupper($cliente->institucion->nombre);
@@ -44,23 +77,34 @@ class DocumentoCotizacionController extends Controller
         $fechaMontaje = $fechaIni->copy()->subDay();
         $fechaDesmontaje = $fechaFin->copy()->addDay();
 
+        $formatoFin = $codigoTipo === 'RESPUESTA_SERVICIOS_ADICIONALES' ? 'd \d\e F \d\e Y' : 'd \d\e F \d\e\l Y';
+
         if ($fechaIni->equalTo($fechaFin)) {
-            $fechasEventoTexto = $fechaIni->translatedFormat('d \d\e F \d\e\l Y');
+            $fechasEventoTexto = 'del ' . $fechaIni->translatedFormat($formatoFin);
         } else {
-            $fechasEventoTexto = 'del ' . $fechaIni->translatedFormat('d \d\e F') . ' al ' . $fechaFin->translatedFormat('d \d\e F \d\e\l Y');
+            $fechasEventoTexto = 'del ' . $fechaIni->translatedFormat('d \d\e F') . ' al ' . $fechaFin->translatedFormat($formatoFin);
         }
 
         $fechaMontajeTexto = $fechaMontaje->translatedFormat('d \d\e F \d\e Y');
         $fechaDesmontajeTexto = $fechaDesmontaje->translatedFormat('d \d\e F \d\e Y');
 
-        // 3. Espacios
+        // 3. Espacios / Servicios Adicionales
         $espacios = $cotizacion->tarifas
             ->map(fn($t) => $t->espacio ? $t->espacio->nombre : null)
             ->filter()
             ->unique()
             ->values()
             ->implode(', ');
-        if (empty($espacios)) {
+
+        if ($codigoTipo === 'RESPUESTA_SERVICIOS_ADICIONALES') {
+            $serviciosList = $cotizacion->servicios
+                ->map(fn($s) => $s->nombre)
+                ->filter()
+                ->unique()
+                ->values()
+                ->implode(', ');
+            $espacios = $serviciosList ?: ($espacios ?: 'los servicios adicionales solicitados');
+        } elseif (empty($espacios)) {
             $espacios = 'las instalaciones solicitadas';
         }
 
@@ -70,9 +114,11 @@ class DocumentoCotizacionController extends Controller
 
         // 5. Documento previamente guardado (si existe)
         $docExistente = CotizacionDocumento::where('cotizacion_id', $cotizacionId)
-            ->where('codigo_tipo', 'RESPUESTA_ARRENDAMIENTO')
+            ->where('codigo_tipo', $codigoTipo)
             ->latest()
             ->first();
+
+        $snapshot = $docExistente ? ($docExistente->snapshot_datos ?? []) : [];
 
         return response()->json([
             'cotizacion' => [
@@ -89,29 +135,40 @@ class DocumentoCotizacionController extends Controller
                 'correo_electronico' => $docExistente ? $docExistente->correo_electronico : ($params['correo_electronico'] ?? 'heidy.burgoa@economiayfinanzas.gob.bo'),
                 'hoja_ruta' => $docExistente ? $docExistente->hoja_ruta : '',
                 'moscas' => $docExistente ? $docExistente->moscas : ($params['moscas'] ?? 'RMRR/JLJC/HABB'),
-                'destinatario_nombre' => $destinatarioNombre,
-                'destinatario_cargo_institucion' => $destinatarioCargoInstitucion,
-                'fechas_evento_texto' => $fechasEventoTexto,
-                'fecha_montaje_texto' => $fechaMontajeTexto,
-                'fecha_desmontaje_texto' => $fechaDesmontajeTexto,
-                'espacios_texto' => $espacios,
-                'evento_nombre' => $cotizacion->descripcion ?: ($cotizacion->evento ? $cotizacion->evento->descripcion : 'EVENTO'),
+                'destinatario_nombre' => $snapshot['destinatario_nombre'] ?? $destinatarioNombre,
+                'destinatario_cargo_institucion' => $snapshot['destinatario_cargo_institucion'] ?? $destinatarioCargoInstitucion,
+                'fechas_evento_texto' => $snapshot['fechas_evento_texto'] ?? $fechasEventoTexto,
+                'fecha_montaje_texto' => $snapshot['fecha_montaje_texto'] ?? $fechaMontajeTexto,
+                'fecha_desmontaje_texto' => $snapshot['fecha_desmontaje_texto'] ?? $fechaDesmontajeTexto,
+                'espacios_texto' => $snapshot['espacios_texto'] ?? $espacios,
+                'evento_nombre' => $snapshot['evento_nombre'] ?? ($cotizacion->descripcion ?: ($cotizacion->evento ? $cotizacion->evento->descripcion : 'EVENTO')),
                 'prefijo_cite' => $prefijoCite,
             ],
             'documento_guardado' => $docExistente ? [
                 'id' => $docExistente->id,
                 'pdf_url' => $docExistente->pdf_path ? Storage::url($docExistente->pdf_path) : null,
+                'pdf_firmado_url' => $docExistente->pdf_firmado_path ? Storage::url($docExistente->pdf_firmado_path) : null,
+                'bloqueado' => (bool) $docExistente->bloqueado,
+                'fecha_firma' => $docExistente->fecha_firma ? $docExistente->fecha_firma->format('d/m/Y H:i') : null,
                 'created_at' => $docExistente->created_at->format('d/m/Y H:i'),
             ] : null,
         ]);
     }
 
     /**
+     * Alias retrocompatible para Respuesta Arrendamiento.
+     */
+    public function formularioRespuestaArrendamiento($cotizacionId)
+    {
+        return $this->formularioPorTipo($cotizacionId, 'RESPUESTA_ARRENDAMIENTO');
+    }
+
+    /**
      * Construye los datos necesarios para renderizar la vista Blade del documento.
      */
-    private function prepararDatosDocumento(Request $request, Cotizacion $cotizacion)
+    private function prepararDatosDocumento(Request $request, Cotizacion $cotizacion, string $codigoTipo = 'RESPUESTA_ARRENDAMIENTO')
     {
-        $plantilla = PlantillaDocumento::where('codigo', 'RESPUESTA_ARRENDAMIENTO')->first();
+        $plantilla = PlantillaDocumento::where('codigo', $codigoTipo)->first();
         $params = $plantilla ? ($plantilla->parametros_default ?? []) : [];
         $prefijoCite = $plantilla ? $plantilla->prefijo_cite : 'MEFP/UCPP/ UCFCM/NE N°';
 
@@ -124,9 +181,12 @@ class DocumentoCotizacionController extends Controller
         $del = $request->input('del');
         $delTexto = $del ? Carbon::parse($del)->translatedFormat('d \d\e F \d\e Y') : null;
 
+        $qrTitulo = self::TIPOS_DOCUMENTO[$codigoTipo]['qr_titulo'] ?? 'RESPUESTA COTIZACION';
         $eventoNom = $request->input('evento_nombre') ?: ($cotizacion->descripcion ?: ($cotizacion->evento ? $cotizacion->evento->descripcion : 'EVENTO'));
-        $qrTexto = "DOC: RESPUESTA COTIZACION\nCITE: {$prefijoCite} {$cite}/{$anio}\nEVENTO: {$eventoNom}\nFECHA: {$fechaFormateada}";
+        $qrTexto = "DOC: {$qrTitulo}\nCITE: {$prefijoCite} {$cite}/{$anio}\nEVENTO: {$eventoNom}\nFECHA: {$fechaFormateada}";
         $qrBase64 = base64_encode(QrCode::format('svg')->size(120)->generate($qrTexto));
+
+        $defaultGarantia = $codigoTipo === 'RESPUESTA_SERVICIOS_ADICIONALES' ? 10 : 20;
 
         return [
             'fecha_formateada' => $fechaFormateada,
@@ -143,12 +203,12 @@ class DocumentoCotizacionController extends Controller
             'espacios_texto' => $request->input('espacios_texto'),
             'plazo' => $request->input('plazo', 'tres (3) días hábiles'),
             'porcentaje_anticipo' => $params['porcentaje_anticipo'] ?? 20,
-            'cuenta_anticipo_banco' => $params['cuenta_anticipo_banco'] ?? 'Banco Unión S.A.',
-            'cuenta_anticipo_numero' => $params['cuenta_anticipo_numero'] ?? '10000041434220',
-            'cuenta_anticipo_titular' => $params['cuenta_anticipo_titular'] ?? 'MEFP-UCPP-RECURSOS PROPIOS',
+            'cuenta_anticipo_banco' => $params['cuenta_anticipo_banco'] ?? ($params['cuenta_pago_banco'] ?? 'Banco Unión S.A.'),
+            'cuenta_anticipo_numero' => $params['cuenta_anticipo_numero'] ?? ($params['cuenta_pago_numero'] ?? '10000041434220'),
+            'cuenta_anticipo_titular' => $params['cuenta_anticipo_titular'] ?? ($params['cuenta_pago_titular'] ?? 'MEFP-UCPP-RECURSOS PROPIOS'),
             'plazo_saldo' => $params['plazo_saldo'] ?? 'hasta diez (10) días calendario',
             'porcentaje_saldo' => $params['porcentaje_saldo'] ?? 80,
-            'porcentaje_garantia' => $params['porcentaje_garantia'] ?? 20,
+            'porcentaje_garantia' => $params['porcentaje_garantia'] ?? $defaultGarantia,
             'cuenta_garantia_banco' => $params['cuenta_garantia_banco'] ?? 'Banco Unión S.A.',
             'cuenta_garantia_numero' => $params['cuenta_garantia_numero'] ?? '10000041433686',
             'cuenta_garantia_titular' => $params['cuenta_garantia_titular'] ?? 'MEFP-UCPP-FONDO ROTATIVO',
@@ -161,42 +221,11 @@ class DocumentoCotizacionController extends Controller
     }
 
     /**
-     * Vista previa en PDF (stream sin guardar en disco).
+     * Reglas de validación para la nota de respuesta a cotización.
      */
-    public function previewRespuestaArrendamiento(Request $request, $cotizacionId)
+    private function reglasValidacionRespuesta(): array
     {
-        $request->validate([
-            'fecha' => 'required|date',
-            'cite' => 'required|string|max:50',
-            'plazo' => 'required|string|max:100',
-            'destinatario_nombre' => 'required|string',
-            'destinatario_cargo_institucion' => 'required|string',
-        ]);
-
-        $cotizacion = Cotizacion::with(['evento'])->findOrFail($cotizacionId);
-        $data = $this->prepararDatosDocumento($request, $cotizacion);
-
-        $pdf = Pdf::loadView('documentos.respuesta_arrendamiento', $data)
-            ->setPaper('letter', 'portrait')
-            ->setOptions([
-                'font_dir' => storage_path('fonts'),
-                'font_cache' => storage_path('fonts'),
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
-                'isPhpEnabled' => true,
-                'defaultFont' => 'sans-serif',
-                'chroot' => [base_path(), public_path(), storage_path()],
-            ]);
-
-        return $pdf->stream("preview_respuesta_arrendamiento_{$cotizacion->id}.pdf");
-    }
-
-    /**
-     * Guarda los datos y genera el PDF definitivo persistido en disco.
-     */
-    public function guardarRespuestaArrendamiento(Request $request, $cotizacionId)
-    {
-        $request->validate([
+        return [
             'fecha' => 'required|date',
             'cite' => 'required|string|max:50',
             'plazo' => 'required|string|max:100',
@@ -206,13 +235,15 @@ class DocumentoCotizacionController extends Controller
             'correo_electronico' => 'nullable|email|max:100',
             'hoja_ruta' => 'nullable|string|max:100',
             'moscas' => 'nullable|string|max:100',
-        ]);
+        ];
+    }
 
-        $cotizacion = Cotizacion::with(['evento'])->findOrFail($cotizacionId);
-        $plantilla = PlantillaDocumento::where('codigo', 'RESPUESTA_ARRENDAMIENTO')->first();
-        $data = $this->prepararDatosDocumento($request, $cotizacion);
-
-        $pdf = Pdf::loadView('documentos.respuesta_arrendamiento', $data)
+    /**
+     * Instancia centralizada de DomPDF con opciones institucionales y rutas de fuentes configuradas.
+     */
+    private function crearInstanciaPdf(string $vista, array $data)
+    {
+        return Pdf::loadView($vista, $data)
             ->setPaper('letter', 'portrait')
             ->setOptions([
                 'font_dir' => storage_path('fonts'),
@@ -223,18 +254,64 @@ class DocumentoCotizacionController extends Controller
                 'defaultFont' => 'sans-serif',
                 'chroot' => [base_path(), public_path(), storage_path()],
             ]);
+    }
 
-        $dir = "cotizaciones/{$cotizacion->id}/documentos";
-        Storage::disk('public')->makeDirectory($dir);
-        $fileName = "respuesta_arrendamiento_{$request->input('cite')}_" . time() . ".pdf";
-        $filePath = "{$dir}/{$fileName}";
+    /**
+     * Vista previa en PDF por tipo de documento (stream sin guardar en disco).
+     */
+    public function previewPorTipo(Request $request, $cotizacionId, string $tipo)
+    {
+        $codigoTipo = $this->resolverCodigoTipo($tipo);
+        $config = self::TIPOS_DOCUMENTO[$codigoTipo];
 
-        Storage::disk('public')->put($filePath, $pdf->output());
+        $request->validate($this->reglasValidacionRespuesta());
+
+        $cotizacion = Cotizacion::with(['evento'])->findOrFail($cotizacionId);
+        $data = $this->prepararDatosDocumento($request, $cotizacion, $codigoTipo);
+
+        $pdf = $this->crearInstanciaPdf($config['vista'], $data);
+
+        return $pdf->stream("preview_{$config['prefijo_archivo']}_{$cotizacion->id}.pdf");
+    }
+
+    /**
+     * Alias retrocompatible para preview de Arrendamiento.
+     */
+    public function previewRespuestaArrendamiento(Request $request, $cotizacionId)
+    {
+        return $this->previewPorTipo($request, $cotizacionId, 'RESPUESTA_ARRENDAMIENTO');
+    }
+
+    /**
+     * Guarda los datos y el snapshot en base de datos para cualquier tipo de documento
+     * SIN almacenar el PDF sin firmar en disco (el PDF sin firmar se genera al vuelo cuando se requiera).
+     * Si el documento ya fue firmado y bloqueado, impide cualquier edición.
+     */
+    public function guardarPorTipo(Request $request, $cotizacionId, string $tipo)
+    {
+        $codigoTipo = $this->resolverCodigoTipo($tipo);
+        $config = self::TIPOS_DOCUMENTO[$codigoTipo];
+
+        $docExistente = CotizacionDocumento::where('cotizacion_id', $cotizacionId)
+            ->where('codigo_tipo', $codigoTipo)
+            ->first();
+
+        if ($docExistente && ($docExistente->bloqueado || !empty($docExistente->pdf_firmado_path))) {
+            return response()->json([
+                'message' => 'Este documento ya cuenta con su versión firmada adjunta y se encuentra bloqueado para edición.',
+            ], 422);
+        }
+
+        $request->validate($this->reglasValidacionRespuesta());
+
+        $cotizacion = Cotizacion::with(['evento'])->findOrFail($cotizacionId);
+        $plantilla = PlantillaDocumento::where('codigo', $codigoTipo)->first();
+        $data = $this->prepararDatosDocumento($request, $cotizacion, $codigoTipo);
 
         $doc = CotizacionDocumento::updateOrCreate(
             [
                 'cotizacion_id' => $cotizacion->id,
-                'codigo_tipo' => 'RESPUESTA_ARRENDAMIENTO',
+                'codigo_tipo' => $codigoTipo,
             ],
             [
                 'plantilla_id' => $plantilla ? $plantilla->id : null,
@@ -247,33 +324,92 @@ class DocumentoCotizacionController extends Controller
                 'hoja_ruta' => $request->input('hoja_ruta'),
                 'moscas' => $request->input('moscas'),
                 'snapshot_datos' => $data,
-                'pdf_path' => $filePath,
+                'pdf_path' => null,
                 'usuario_id' => Auth::id(),
             ]
         );
 
         return response()->json([
-            'message' => 'Documento de Respuesta a Solicitud de Arrendamiento generado exitosamente.',
+            'message' => $config['mensaje_exito'],
             'documento' => $doc,
-            'pdf_url' => Storage::url($filePath),
         ]);
     }
 
     /**
-     * Muestra o descarga el PDF guardado.
+     * Sube el documento PDF escaneado con firmas (el único que se almacena en disco)
+     * y bloquea la edición del documento.
+     */
+    public function subirFirmadoPorTipo(Request $request, $cotizacionId, string $tipo)
+    {
+        $codigoTipo = $this->resolverCodigoTipo($tipo);
+        $config = self::TIPOS_DOCUMENTO[$codigoTipo];
+
+        $request->validate([
+            'pdf_firmado' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        $doc = CotizacionDocumento::where('cotizacion_id', $cotizacionId)
+            ->where('codigo_tipo', $codigoTipo)
+            ->first();
+
+        if (!$doc) {
+            return response()->json([
+                'message' => 'Primero debe generar y emitir el documento antes de subir la versión firmada.',
+            ], 422);
+        }
+
+        if ($doc->bloqueado || !empty($doc->pdf_firmado_path)) {
+            return response()->json([
+                'message' => 'El documento firmado ya fue registrado previamente y se encuentra bloqueado.',
+            ], 422);
+        }
+
+        $dir = "expedientes/{$cotizacionId}/documentos";
+        Storage::disk('public')->makeDirectory($dir);
+
+        $file = $request->file('pdf_firmado');
+        $citeLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $doc->cite ?? 'SN');
+        $fileName = "{$config['prefijo_archivo']}_firmado_{$citeLimpio}_" . time() . ".pdf";
+        $filePath = $file->storeAs($dir, $fileName, 'public');
+
+        $doc->update([
+            'pdf_firmado_path' => $filePath,
+            'fecha_firma' => Carbon::now(),
+            'bloqueado' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'Documento firmado adjuntado con éxito. La edición de esta nota ha quedado bloqueada.',
+            'documento' => $doc,
+            'pdf_firmado_url' => Storage::url($filePath),
+        ]);
+    }
+
+    /**
+     * Alias retrocompatible para guardar Arrendamiento.
+     */
+    public function guardarRespuestaArrendamiento(Request $request, $cotizacionId)
+    {
+        return $this->guardarPorTipo($request, $cotizacionId, 'RESPUESTA_ARRENDAMIENTO');
+    }
+
+    /**
+     * Genera al vuelo (stream en memoria, sin guardar en disco) el PDF sin firmar
+     * a partir de los datos guardados en la base de datos (`snapshot_datos`).
      */
     public function verPdf($cotizacionId, $documentoId)
     {
         $documento = CotizacionDocumento::where('cotizacion_id', $cotizacionId)
             ->findOrFail($documentoId);
 
-        if (!$documento->pdf_path || !Storage::disk('public')->exists($documento->pdf_path)) {
-            return response()->json(['message' => 'El archivo PDF no existe en el servidor.'], 404);
-        }
+        $codigoTipo = $documento->codigo_tipo;
+        $config = self::TIPOS_DOCUMENTO[$codigoTipo] ?? self::TIPOS_DOCUMENTO['RESPUESTA_ARRENDAMIENTO'];
+        $data = $documento->snapshot_datos ?? [];
 
-        return response()->file(Storage::disk('public')->path($documento->pdf_path), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . basename($documento->pdf_path) . '"',
-        ]);
+        $pdf = $this->crearInstanciaPdf($config['vista'], $data);
+        $citeLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $documento->cite ?? 'SN');
+
+        return $pdf->stream("{$config['prefijo_archivo']}_{$citeLimpio}.pdf");
     }
 }
+

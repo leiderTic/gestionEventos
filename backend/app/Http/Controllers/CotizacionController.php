@@ -87,15 +87,30 @@ class CotizacionController extends Controller
         return DB::transaction(function () use ($request) {
             $userId = Auth::id() ?? 1;
             $user = User::find($userId);
+            $alias = $user && !empty($user->alias) ? $user->alias : 'XX';
             $anioActual = date('Y');
 
-            $maxCorrelativo = Cotizacion::where('user_id', $userId)
+            // 1. Obtener correlativo máximo considerando también cotizaciones eliminadas (withTrashed)
+            // y cualquier cotización con el mismo alias para evitar colisiones globales
+            $maxCorrelativo = Cotizacion::withTrashed()
+                ->where(function ($q) use ($userId, $alias, $anioActual) {
+                    $q->where('user_id', $userId)
+                      ->orWhere('codigo', 'LIKE', "COT-{$alias}-%/{$anioActual}");
+                })
                 ->whereYear('created_at', $anioActual)
                 ->max('correlativo');
 
-            $siguienteCorrelativo = $maxCorrelativo ? $maxCorrelativo + 1 : 1;
-            $correlativoFormateado = str_pad($siguienteCorrelativo, 3, '0', STR_PAD_LEFT);
-            $codigo = 'COT-' . $user->alias . '-' . $correlativoFormateado . '/' . $anioActual;
+            $siguienteCorrelativo = $maxCorrelativo ? ((int) $maxCorrelativo + 1) : 1;
+
+            // 2. Garantizar que el código generado sea único en la base de datos (incluso trashed)
+            do {
+                $correlativoFormateado = str_pad($siguienteCorrelativo, 3, '0', STR_PAD_LEFT);
+                $codigo = 'COT-' . $alias . '-' . $correlativoFormateado . '/' . $anioActual;
+                $existe = Cotizacion::withTrashed()->where('codigo', $codigo)->exists();
+                if ($existe) {
+                    $siguienteCorrelativo++;
+                }
+            } while ($existe);
 
             $cotizacion = Cotizacion::create([
                 'codigo' => $codigo,

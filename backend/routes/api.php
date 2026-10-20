@@ -94,12 +94,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('documentos-base', [CotizacionController::class, 'subirDocumentosBase'])
             ->middleware('permission:cotizaciones.editar');
 
-        // Documentos de Respuesta a Cotización
-        Route::get('documentos/respuesta-arrendamiento/formulario', [DocumentoCotizacionController::class, 'formularioRespuestaArrendamiento']);
-        Route::post('documentos/respuesta-arrendamiento/preview', [DocumentoCotizacionController::class, 'previewRespuestaArrendamiento']);
-        Route::post('documentos/respuesta-arrendamiento', [DocumentoCotizacionController::class, 'guardarRespuestaArrendamiento'])
+        // Documentos de Respuesta a Cotización (respuesta-arrendamiento, respuesta-servicios-adicionales)
+        Route::get('documentos/{documentoId}/pdf', [DocumentoCotizacionController::class, 'verPdf'])
+            ->whereNumber('documentoId');
+        Route::get('documentos/{tipo}/formulario', [DocumentoCotizacionController::class, 'formularioPorTipo']);
+        Route::post('documentos/{tipo}/preview', [DocumentoCotizacionController::class, 'previewPorTipo']);
+        Route::post('documentos/{tipo}', [DocumentoCotizacionController::class, 'guardarPorTipo'])
             ->middleware('permission:cotizaciones.editar');
-        Route::get('documentos/{documentoId}/pdf', [DocumentoCotizacionController::class, 'verPdf']);
+        Route::post('documentos/{tipo}/subir-firmado', [DocumentoCotizacionController::class, 'subirFirmadoPorTipo'])
+            ->middleware('permission:cotizaciones.editar');
     });
 
     // Reuniones — Rutas independientes

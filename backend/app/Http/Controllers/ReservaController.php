@@ -18,7 +18,22 @@ class ReservaController extends Controller
      */
     public function confirmarReserva(Request $request, $cotizacionId)
     {
-        $cotizacion = Cotizacion::findOrFail($cotizacionId);
+        $cotizacion = Cotizacion::with('documentos')->findOrFail($cotizacionId);
+
+        $docArrendamiento = $cotizacion->documentos->firstWhere('codigo_tipo', 'RESPUESTA_ARRENDAMIENTO');
+        $docServicios = $cotizacion->documentos->firstWhere('codigo_tipo', 'RESPUESTA_SERVICIOS_ADICIONALES');
+
+        if (!$docArrendamiento || empty($docArrendamiento->pdf_firmado_path)) {
+            return response()->json([
+                'message' => 'Requisito pendiente: Debe generar y subir el PDF firmado de la Respuesta a Solicitud de Arrendamiento antes de confirmar la reserva.'
+            ], 422);
+        }
+
+        if (!$docServicios || empty($docServicios->pdf_firmado_path)) {
+            return response()->json([
+                'message' => 'Requisito pendiente: Debe generar y subir el PDF firmado de la Respuesta a Solicitud de Servicios Adicionales antes de confirmar la reserva.'
+            ], 422);
+        }
 
         return DB::transaction(function () use ($request, $cotizacion) {
             $anioActual = date('Y');

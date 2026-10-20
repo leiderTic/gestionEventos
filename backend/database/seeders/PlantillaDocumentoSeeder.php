@@ -41,5 +41,38 @@ class PlantillaDocumentoSeeder extends Seeder
                 'activo' => true,
             ]
         );
+
+        PlantillaDocumento::updateOrCreate(
+            ['codigo' => 'RESPUESTA_SERVICIOS_ADICIONALES'],
+            [
+                'titulo' => 'Respuesta a Solicitud de Cotización Servicios Adicionales',
+                'prefijo_cite' => 'MEFP/UCPP/ UCFCM/NE N°',
+                'parametros_default' => [
+                    'plazo_anticipo' => 'tres (3) días hábiles',
+                    'porcentaje_pago_total' => 100,
+                    'cuenta_pago_banco' => 'Banco Unión S.A.',
+                    'cuenta_pago_numero' => '10000041434220',
+                    'cuenta_pago_titular' => 'MEFP-UCPP-RECURSOS PROPIOS',
+                    'porcentaje_garantia' => 10,
+                    'cuenta_garantia_banco' => 'Banco Unión S.A.',
+                    'cuenta_garantia_numero' => '10000041433686',
+                    'cuenta_garantia_titular' => 'MEFP-UCPP-FONDO ROTATIVO',
+                    'telefono' => '77240445',
+                    'correo_electronico' => 'heidy.burgoa@economiayfinanzas.gob.bo',
+                    'moscas' => 'RMRR/JLJC/HABB',
+                ],
+                'contenido_estatico' => [
+                    'referencia_base' => 'RESPUESTA A SOLICITUD DE COTIZACIÓN SERVICIOS ADICIONALES',
+                    'parrafo_intro' => 'A tiempo de saludarlo con la mayor atención, habiéndose recibido su nota de solicitud de cotización de servicios adicionales para el alquiler del',
+                    'parrafo_formalizacion' => 'Para efectos de formalizar el arrendamiento de los servicios adicionales requeridos, deberá efectuar dentro del plazo de',
+                    'parrafo_orden_servicios' => 'Para efectos de la elaboración y suscripción de la Orden de Servicios Adicionales, deberá remitirse la documentación que corresponda de acuerdo con la naturaleza jurídica del solicitante, conforme al siguiente detalle:',
+                    'despedida' => 'Sin otro particular, reitero a usted las seguridades de mi consideración y estima.',
+                    'cargo_firmante' => 'Dirección General Ejecutiva',
+                    'institucion_firmante' => 'Unidad de Coordinación de Programas y Proyectos (UCPP)',
+                ],
+                'activo' => true,
+            ]
+        );
     }
 }
+

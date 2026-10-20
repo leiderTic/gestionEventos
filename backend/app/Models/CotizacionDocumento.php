@@ -26,11 +26,16 @@ class CotizacionDocumento extends Model
         'moscas',
         'snapshot_datos',
         'pdf_path',
+        'pdf_firmado_path',
+        'fecha_firma',
+        'bloqueado',
         'usuario_id',
     ];
 
     protected $casts = [
         'fecha' => 'date',
+        'fecha_firma' => 'datetime',
+        'bloqueado' => 'boolean',
         'snapshot_datos' => 'array',
     ];
 

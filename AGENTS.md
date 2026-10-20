@@ -152,21 +152,28 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
 
 * **Backend (`backend/`):**
   * Rutas API: `backend/routes/api.php`
-  * Controladores: `backend/app/Http/Controllers/` (`CotizacionController.php`, `PagoController.php`, `RespaldoController.php`, `ReunionController.php`)
-  * Modelos: `backend/app/Models/` (`Cotizacion.php`, `Pago.php`, `Respaldo.php`, `Reunion.php`, `User.php`)
-  * Vistas Blade PDF: `backend/resources/views/cotizaciones/pdf.blade.php`
-  * Seeders: `backend/database/seeders/UserSeeder.php`
+  * Controladores: `backend/app/Http/Controllers/` (`CotizacionController.php`, `DocumentoCotizacionController.php`, `PagoController.php`, `RespaldoController.php`, `ReunionController.php`)
+  * Modelos: `backend/app/Models/` (`Cotizacion.php`, `CotizacionDocumento.php`, `PlantillaDocumento.php`, `Pago.php`, `Respaldo.php`, `Reunion.php`, `User.php`)
+  * Vistas Blade PDF: `backend/resources/views/cotizaciones/pdf.blade.php`, `backend/resources/views/documentos/plantilla_base.blade.php`, `backend/resources/views/documentos/respuesta_arrendamiento.blade.php`, `backend/resources/views/documentos/respuesta_servicios_adicionales.blade.php`
+  * Seeders: `backend/database/seeders/UserSeeder.php`, `backend/database/seeders/PlantillaDocumentoSeeder.php`
 * **Frontend (`frontend/`):**
   * Vistas: `frontend/src/views/admin/cotizacion/` (`CotizacionNuevo.vue`, `CotizacionDetalle.vue`, `Cotizacion.vue`)
-  * Servicios: `frontend/src/services/` (`cotizacion.services.js`, `pago.services.js`, `banco.services.js`, `tiporespaldo.services.js`)
+  * Componentes Modulares de Cotización (`frontend/src/components/cotizacion/`):
+    * `SeccionDocumentosPaso1.vue`: Tarjetas de presentación de documentos base y notas de respuesta CITE (Arrendamiento y Servicios Adicionales) del Paso 1.
+    * `ModalDocumentosBase.vue`: Modal autocontenido para subir/actualizar PDFs de Solicitud de Arrendamiento y Verificación de Habilitación.
+    * `ModalRespuestaArrendamiento.vue`: Modal autocontenido y parametrizable por `tipoDocumento` (`respuesta-arrendamiento` | `respuesta-servicios-adicionales`) con formulario reactivo, vista previa PDF y emisión del documento.
+    * `ModalVisorPdf.vue`: Visor PDF reutilizable en ventana modal.
+  * Servicios: `frontend/src/services/` (`cotizacion.services.js`, `documento.services.js`, `pago.services.js`, `banco.services.js`, `tiporespaldo.services.js`)
   * Configuración HTTP: `frontend/src/api/axios.js` y `frontend/src/services/ApiService.js`
 
 ---
 
 ## 9. Tareas en Curso y Puntos de Atención
 
-1. **Permisos de DomPDF (Generación de PDF en Backend):**
-   * DomPDF requiere la carpeta `storage/fonts` con permisos de escritura para el usuario del servidor web (`www-data`). Al llamar a `setOptions([...])` en Laravel-DomPDF, es mandatorio incluir siempre:
+1. **Generación de Códigos de Cotización (`COT-{ALIAS}-NNN/YYYY`):**
+   * `CotizacionController::store()` consulta `Cotizacion::withTrashed()` filtrando tanto por `user_id` como por `codigo LIKE "COT-{$alias}-%/{$anioActual}"` y verifica en un bucle `do ... while` la unicidad del código antes de insertar, evitando violaciones del índice único `cotizaciones_codigo_unique` en PostgreSQL incluso cuando existen registros eliminados lógicamente (`SoftDeletes`) o usuarios con las mismas iniciales.
+2. **Permisos de DomPDF (Generación de PDF en Backend):**
+   * DomPDF requiere la carpeta `storage/fonts` con permisos de escritura para el usuario del servidor web (`www-data`). Al llamar a `setOptions([...])` en Laravel-DomPDF (`DocumentoCotizacionController::crearInstanciaPdf()`), es mandatorio incluir siempre:
      ```php
      'font_dir' => storage_path('fonts'),
      'font_cache' => storage_path('fonts'),
@@ -179,7 +186,7 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
      docker exec -it gestion_backend_laravel chmod -R 777 storage bootstrap/cache
      docker exec -it gestion_backend_laravel chmod -R 777 vendor/dompdf/dompdf/lib/fonts
      ```
-2. **Cierre del Modal de Confirmación de Reserva:**
+3. **Cierre del Modal de Confirmación de Reserva:**
    * Crear `frontend/src/services/reunion.services.js` para llamar a `POST /api/cotizaciones/{id}/reuniones`.
    * En `CotizacionDetalle.vue`, al confirmar la reserva, llamar al servicio de reunión y actualizar la cotización a `paso: 2` para avanzar el stepper visual.
 
@@ -202,18 +209,30 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
   * Márgenes de página: Superior `3,76 cm`, Inferior `4,01 cm`, Izquierdo `2,54 cm`, Derecho `2,54 cm`.
   * Tipografía: Century Gothic tamaño 11pt.
   * Opciones requeridas en DomPDF: `isPhpEnabled => true` (indispensable para numeración dinámica `Página X de Y`).
-* **Documentos Implementados:**
-  1. **Respuesta a Solicitud de Cotización por Arrendamiento de Espacios:**
-     * Plantilla Blade: `backend/resources/views/documentos/respuesta_arrendamiento.blade.php` (formato exacto de 3 páginas con CITE, QR, firmas institucionales, cuentas Banco Unión).
-     * Rutas API (`backend/routes/api.php`):
-       * `GET /api/cotizaciones/{id}/documentos/respuesta-arrendamiento/formulario`
-       * `POST /api/cotizaciones/{id}/documentos/respuesta-arrendamiento/preview`
-       * `POST /api/cotizaciones/{id}/documentos/respuesta-arrendamiento`
-       * `GET /api/cotizaciones/{id}/documentos/{documentoId}/pdf`
-     * Servicio Frontend: `frontend/src/services/cotizacion.services.js` (`getFormularioRespuestaArrendamiento`, `previewRespuestaArrendamiento`, `guardarRespuestaArrendamiento`, `getRespuestaArrendamientoPdf`).
-     * Componente Vista: `frontend/src/views/admin/cotizacion/CotizacionDetalle.vue`
-       * Tarjeta en sección de documentos con estado de emisión, CITE y acceso rápido a PDF o edición.
-       * Botón en panel de acciones (Paso 1 y posteriores).
-       * Modal de formulario (`showModalRespuestaArrendamiento`): Fecha, CITE (prefijo `MEFP/UCPP/ UCFCM/NE N°`), Solicitud cliente (`Del`), Plazo, Teléfono, Correo, HR, Moscas y sección desplegable de datos calculados del evento.
-       * Modal visor integrado (`showModalVisorPdf`): permite previsualizar el PDF en la misma pantalla sin abrir pestañas externas.
+* **Arquitectura Modular de Documentos:**
+  * **Tipos Soportados (`PlantillaDocumentoSeeder.php`):**
+    1. `RESPUESTA_ARRENDAMIENTO` (`respuesta-arrendamiento`): Vista `documentos.respuesta_arrendamiento` (Anticipo 20%, Saldo 80%, Garantía 20%).
+    2. `RESPUESTA_SERVICIOS_ADICIONALES` (`respuesta-servicios-adicionales`): Vista `documentos.respuesta_servicios_adicionales` (Pago total 100% en Recursos Propios, Garantía 10% en Fondo Rotativo, glosa `"SERVICIOS ADICIONALES – {EVENTO}"`).
+  * **Ciclo de Vida, Almacenamiento e Inmutabilidad (`cotizacion_documentos`):**
+    * **PDF sin firmar (Generación al vuelo):** Al guardar el formulario (`POST /api/cotizaciones/{id}/documentos/{tipo}`), solo se persisten los datos y `snapshot_datos` en la base de datos (**no se guarda archivo en disco**). Cada vez que un usuario necesita ver, descargar o imprimir el documento sin firmar (`GET /api/cotizaciones/{id}/documentos/{documentoId}/pdf`), DomPDF lo genera en memoria al instante.
+    * **PDF Firmado (Único almacenado en disco):** Cuando el usuario imprime, hace firmar y sube el PDF escaneado (`POST /api/cotizaciones/{id}/documentos/{tipo}/subir-firmado`), el archivo se guarda físicamente en `storage/app/public/expedientes/{cotizacion_id}/documentos/` (junto a la Solicitud de Arrendamiento y la Verificación de Habilitación).
+    * **Bloqueo permanente:** Al subir el PDF firmado se registra `pdf_firmado_path`, `fecha_firma` y `bloqueado = true`, impidiendo cualquier edición posterior tanto en Frontend como en Backend (`422`).
+    * **Requisito para Confirmar Reserva (Paso 2):** Tanto `CotizacionDetalle.vue` como `ReservaController::confirmarReserva()` exigen que **ambos documentos** (`RESPUESTA_ARRENDAMIENTO` y `RESPUESTA_SERVICIOS_ADICIONALES`) cuenten con su `pdf_firmado_path` subido antes de confirmar la reserva.
+  * **Backend (`DocumentoCotizacionController.php`):**
+    * Endpoints dinámicos por `{tipo}` (`GET /api/cotizaciones/{id}/documentos/{tipo}/formulario`, `POST .../preview`, `POST .../{tipo}`, `POST .../{tipo}/subir-firmado`).
+    * Centraliza las reglas de validación en `reglasValidacionRespuesta()` y la creación de la instancia DomPDF con permisos y fuentes en `crearInstanciaPdf(string $vista, array $data)`.
+  * **Servicio Frontend (`frontend/src/services/documento.services.js`):**
+    * `subirDocumentosBase(cotizacionId, formData)`
+    * `getFormularioPorTipo(cotizacionId, tipo)`
+    * `previewPorTipo(cotizacionId, tipo, payload)`
+    * `guardarPorTipo(cotizacionId, tipo, payload)`
+    * `subirFirmadoPorTipo(cotizacionId, tipo, formData)`
+    * `getDocumentoPdf(cotizacionId, documentoId)`
+  * **Componentes Vue 3 (`frontend/src/components/cotizacion/`):**
+    1. `SeccionDocumentosPaso1.vue`: Muestra las tarjetas de documentos del Paso 1 (Solicitud de Arrendamiento, Verificación de Habilitación, Respuesta de Arrendamiento y Respuesta de Servicios Adicionales con sus CITEs, estado de firma y bloqueo).
+    2. `ModalDocumentosBase.vue`: Gestiona selección de archivos PDF, validación de tamaño (máx. 10MB) y subida a `documento.services.js`.
+    3. `ModalRespuestaArrendamiento.vue`: Recibe `:tipoDocumento="tipoDocumentoActivo"` para cargar, previsualizar y emitir de forma independiente tanto la nota de Arrendamiento como la de Servicios Adicionales con su propio CITE y datos.
+    4. `ModalSubirDocumentoFirmado.vue`: Modal modular para adjuntar el PDF escaneado firmado de cualquiera de las 2 notas y bloquear su edición.
+    5. `ModalVisorPdf.vue`: Visor PDF transversal reutilizable para cualquier documento del expediente.
+
 
