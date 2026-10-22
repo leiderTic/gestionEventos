@@ -20,12 +20,26 @@ class PagoController extends Controller
         $cotizacion = Cotizacion::findOrFail($id);
 
         $request->validate([
-            'monto_pagado' => 'required|numeric|min:0',
+            'monto_pagado' => 'required|numeric|min:0.01',
             'fecha_deposito' => 'required|date',
             'nro_comprobante' => 'required|string',
             'banco_id' => 'required|exists:bancos,id',
             'boucher' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
+
+        // Validar rango del anticipo para confirmación de reserva (entre el 20% y el 100% del monto total)
+        $montoTotal = (float) ($cotizacion->monto_total ?? 0);
+        if ($montoTotal > 0 && ($cotizacion->paso <= 1 || $cotizacion->pagos()->count() === 0)) {
+            $minimo = round($montoTotal * 0.20, 2);
+            $maximo = round($montoTotal, 2);
+            $ingresado = round((float) $request->monto_pagado, 2);
+
+            if ($ingresado + 0.01 < $minimo || $ingresado - 0.01 > $maximo) {
+                return response()->json([
+                    'error' => "El monto del depósito para confirmar la reserva debe estar entre el 20% (Bs " . number_format($minimo, 2, '.', ',') . ") y el 100% (Bs " . number_format($maximo, 2, '.', ',') . ")."
+                ], 422);
+            }
+        }
 
         // Validar unicidad compuesta (nro_comprobante + banco_id)
         $existe = Pago::where('nro_comprobante', $request->nro_comprobante)

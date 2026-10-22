@@ -211,28 +211,43 @@
                         <InputText v-model="form.evento_nombre" fluid placeholder="Denominación del evento" />
                     </div>
 
-                    <div :class="['grid grid-cols-1 gap-3', esServiciosAdicionales ? 'md:grid-cols-1' : 'md:grid-cols-3']">
+                    <!-- Fila 1: Fechas del Evento (Solo lectura, provenientes de la Cotización) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label
                                 class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
-                                Fechas Solicitadas
+                                Fecha Inicio del Evento
                             </label>
-                            <InputText v-model="form.fechas_evento_texto" fluid
-                                placeholder="del ... al ... de ... de ..." />
+                            <InputText :modelValue="form.fecha_evento_ini" fluid readonly disabled
+                                class="!bg-surface-100 dark:!bg-surface-800 !text-surface-600 dark:!text-surface-300 cursor-not-allowed" />
                         </div>
-                        <div v-if="!esServiciosAdicionales">
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
+                                Fecha Fin del Evento
+                            </label>
+                            <InputText :modelValue="form.fecha_evento_fin" fluid readonly disabled
+                                class="!bg-surface-100 dark:!bg-surface-800 !text-surface-600 dark:!text-surface-300 cursor-not-allowed" />
+                        </div>
+                    </div>
+
+                    <!-- Fila 2: Fechas de Montaje y Desmontaje (Editables con DatePicker) -->
+                    <div v-if="!esServiciosAdicionales" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
                             <label
                                 class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
                                 Fecha de Montaje (1 día antes)
                             </label>
-                            <InputText v-model="form.fecha_montaje_texto" fluid placeholder="... de ... de ..." />
+                            <DatePicker v-model="form.fecha_montaje" dateFormat="yy-mm-dd" showIcon fluid
+                                placeholder="aaaa-mm-dd" />
                         </div>
-                        <div v-if="!esServiciosAdicionales">
+                        <div>
                             <label
                                 class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
                                 Fecha de Desmontaje (1 día después)
                             </label>
-                            <InputText v-model="form.fecha_desmontaje_texto" fluid placeholder="... de ... de ..." />
+                            <DatePicker v-model="form.fecha_desmontaje" dateFormat="yy-mm-dd" showIcon fluid
+                                placeholder="aaaa-mm-dd" />
                         </div>
                     </div>
 
@@ -241,7 +256,8 @@
                             class="block text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-tight mb-1">
                             {{ esServiciosAdicionales ? 'Servicios Adicionales / Espacio Alquilado' : 'Espacios Arrendados' }}
                         </label>
-                        <InputText v-model="form.espacios_texto" fluid
+                        <InputText v-model="form.espacios_texto" fluid readonly disabled
+                            class="!bg-surface-100 dark:!bg-surface-800 !text-surface-600 dark:!text-surface-300 cursor-not-allowed"
                             :placeholder="esServiciosAdicionales ? 'Ej: Depósito 4' : 'Auditorio Illimani, Sala VIP, etc.'" />
                     </div>
                 </div>
@@ -331,9 +347,10 @@ const form = reactive({
     destinatario_nombre: '',
     destinatario_cargo_institucion: '',
     evento_nombre: '',
-    fechas_evento_texto: '',
-    fecha_montaje_texto: '',
-    fecha_desmontaje_texto: '',
+    fecha_evento_ini: '',
+    fecha_evento_fin: '',
+    fecha_montaje: null,
+    fecha_desmontaje: null,
     espacios_texto: '',
     prefijo_cite: 'MEFP/UCPP/ UCFCM/NE N°',
     anio: new Date().getFullYear(),
@@ -372,9 +389,10 @@ const cargarDatosFormulario = async () => {
         form.destinatario_nombre = data.destinatario_nombre || '';
         form.destinatario_cargo_institucion = data.destinatario_cargo_institucion || '';
         form.evento_nombre = data.evento_nombre || '';
-        form.fechas_evento_texto = data.fechas_evento_texto || '';
-        form.fecha_montaje_texto = data.fecha_montaje_texto || '';
-        form.fecha_desmontaje_texto = data.fecha_desmontaje_texto || '';
+        form.fecha_evento_ini = data.fecha_evento_ini || '';
+        form.fecha_evento_fin = data.fecha_evento_fin || '';
+        form.fecha_montaje = data.fecha_montaje ? new Date(data.fecha_montaje + 'T12:00:00') : null;
+        form.fecha_desmontaje = data.fecha_desmontaje ? new Date(data.fecha_desmontaje + 'T12:00:00') : null;
         form.espacios_texto = data.espacios_texto || '';
         form.prefijo_cite = data.prefijo_cite || 'MEFP/UCPP/ UCFCM/NE N°';
         form.anio = form.fecha ? form.fecha.getFullYear() : new Date().getFullYear();
@@ -414,10 +432,8 @@ const prepararPayload = () => {
         destinatario_nombre: form.destinatario_nombre,
         destinatario_cargo_institucion: form.destinatario_cargo_institucion,
         evento_nombre: form.evento_nombre,
-        fechas_evento_texto: form.fechas_evento_texto,
-        fecha_montaje_texto: form.fecha_montaje_texto,
-        fecha_desmontaje_texto: form.fecha_desmontaje_texto,
-        espacios_texto: form.espacios_texto,
+        fecha_montaje: formatLocalDate(form.fecha_montaje),
+        fecha_desmontaje: formatLocalDate(form.fecha_desmontaje),
     };
 };
 

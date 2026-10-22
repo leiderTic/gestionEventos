@@ -61,16 +61,26 @@ class DocumentoCotizacionController extends Controller
 
         $plantilla = PlantillaDocumento::where('codigo', $codigoTipo)->first();
 
-        // 1. Destinatario
-        $cliente = $cotizacion->clientes->first();
-        $destinatarioNombre = $cliente ? $cliente->nombre : 'CLIENTE';
+        // 1. Destinatario (Persona asociada a la institución, o la persona en sí si no es institución)
+        $institucion = $cotizacion->clientes->firstWhere('tipo_cliente_id', 1);
+        $contacto = $cotizacion->clientes->firstWhere('tipo_cliente_id', 2);
+        $primerCliente = $cotizacion->clientes->first();
 
-        $destinatarioCargoInstitucion = 'ENCARGADO';
-        if ($cliente && $cliente->institucion) {
-            $destinatarioCargoInstitucion = 'ENCARGADO - ' . mb_strtoupper($cliente->institucion->nombre);
+        $personaDestinatario = $contacto ?: $primerCliente;
+        $destinatarioNombre = $personaDestinatario ? $personaDestinatario->nombre : 'CLIENTE';
+
+        $nombreInstitucion = null;
+        if ($institucion) {
+            $nombreInstitucion = $institucion->nombre;
+        } elseif ($personaDestinatario && $personaDestinatario->institucion) {
+            $nombreInstitucion = $personaDestinatario->institucion->nombre;
         }
 
-        // 2. Fechas
+        $destinatarioCargoInstitucion = $nombreInstitucion
+            ? 'ENCARGADO - ' . mb_strtoupper($nombreInstitucion)
+            : 'ENCARGADO';
+
+        // 2. Fechas (YYYY-MM-DD para los selectores de fecha y literal para el documento)
         Carbon::setLocale('es');
         $fechaIni = Carbon::parse($cotizacion->fecha_ini);
         $fechaFin = Carbon::parse($cotizacion->fecha_fin);
@@ -137,10 +147,14 @@ class DocumentoCotizacionController extends Controller
                 'moscas' => $docExistente ? $docExistente->moscas : ($params['moscas'] ?? 'RMRR/JLJC/HABB'),
                 'destinatario_nombre' => $snapshot['destinatario_nombre'] ?? $destinatarioNombre,
                 'destinatario_cargo_institucion' => $snapshot['destinatario_cargo_institucion'] ?? $destinatarioCargoInstitucion,
-                'fechas_evento_texto' => $snapshot['fechas_evento_texto'] ?? $fechasEventoTexto,
+                'fecha_evento_ini' => $fechaIni->format('Y-m-d'),
+                'fecha_evento_fin' => $fechaFin->format('Y-m-d'),
+                'fecha_montaje' => $snapshot['fecha_montaje'] ?? $fechaMontaje->format('Y-m-d'),
+                'fecha_desmontaje' => $snapshot['fecha_desmontaje'] ?? $fechaDesmontaje->format('Y-m-d'),
+                'fechas_evento_texto' => $fechasEventoTexto,
                 'fecha_montaje_texto' => $snapshot['fecha_montaje_texto'] ?? $fechaMontajeTexto,
                 'fecha_desmontaje_texto' => $snapshot['fecha_desmontaje_texto'] ?? $fechaDesmontajeTexto,
-                'espacios_texto' => $snapshot['espacios_texto'] ?? $espacios,
+                'espacios_texto' => $espacios,
                 'evento_nombre' => $snapshot['evento_nombre'] ?? ($cotizacion->descripcion ?: ($cotizacion->evento ? $cotizacion->evento->descripcion : 'EVENTO')),
                 'prefijo_cite' => $prefijoCite,
             ],
@@ -181,6 +195,46 @@ class DocumentoCotizacionController extends Controller
         $del = $request->input('del');
         $delTexto = $del ? Carbon::parse($del)->translatedFormat('d \d\e F \d\e Y') : null;
 
+        // Fechas del evento tomadas directamente de la cotización en BD (no editables)
+        $formatoFin = $codigoTipo === 'RESPUESTA_SERVICIOS_ADICIONALES' ? 'd \d\e F \d\e Y' : 'd \d\e F \d\e\l Y';
+        $fechaIniObj = Carbon::parse($cotizacion->fecha_ini);
+        $fechaFinObj = Carbon::parse($cotizacion->fecha_fin ?: $cotizacion->fecha_ini);
+
+        if ($fechaIniObj->equalTo($fechaFinObj)) {
+            $fechasEventoTexto = 'del ' . $fechaIniObj->translatedFormat($formatoFin);
+        } else {
+            $fechasEventoTexto = 'del ' . $fechaIniObj->translatedFormat('d \d\e F') . ' al ' . $fechaFinObj->translatedFormat($formatoFin);
+        }
+
+        // Fechas de montaje y desmontaje (editables mediante selector de fecha, formateadas a literal)
+        $fechaMontajeRaw = $request->input('fecha_montaje');
+        $fechaMontajeObj = $fechaMontajeRaw ? Carbon::parse($fechaMontajeRaw) : $fechaIniObj->copy()->subDay();
+        $fechaMontajeTexto = $fechaMontajeObj->translatedFormat('d \d\e F \d\e Y');
+
+        $fechaDesmontajeRaw = $request->input('fecha_desmontaje');
+        $fechaDesmontajeObj = $fechaDesmontajeRaw ? Carbon::parse($fechaDesmontajeRaw) : $fechaFinObj->copy()->addDay();
+        $fechaDesmontajeTexto = $fechaDesmontajeObj->translatedFormat('d \d\e F \d\e Y');
+
+        // Espacios / Servicios Adicionales (calculado directamente de la cotización)
+        $espacios = $cotizacion->tarifas
+            ->map(fn($t) => $t->espacio ? $t->espacio->nombre : null)
+            ->filter()
+            ->unique()
+            ->values()
+            ->implode(', ');
+
+        if ($codigoTipo === 'RESPUESTA_SERVICIOS_ADICIONALES') {
+            $serviciosList = $cotizacion->servicios
+                ->map(fn($s) => $s->nombre)
+                ->filter()
+                ->unique()
+                ->values()
+                ->implode(', ');
+            $espacios = $serviciosList ?: ($espacios ?: 'los servicios adicionales solicitados');
+        } elseif (empty($espacios)) {
+            $espacios = 'las instalaciones solicitadas';
+        }
+
         $qrTitulo = self::TIPOS_DOCUMENTO[$codigoTipo]['qr_titulo'] ?? 'RESPUESTA COTIZACION';
         $eventoNom = $request->input('evento_nombre') ?: ($cotizacion->descripcion ?: ($cotizacion->evento ? $cotizacion->evento->descripcion : 'EVENTO'));
         $qrTexto = "DOC: {$qrTitulo}\nCITE: {$prefijoCite} {$cite}/{$anio}\nEVENTO: {$eventoNom}\nFECHA: {$fechaFormateada}";
@@ -197,10 +251,14 @@ class DocumentoCotizacionController extends Controller
             'destinatario_nombre' => $request->input('destinatario_nombre'),
             'destinatario_cargo_institucion' => $request->input('destinatario_cargo_institucion'),
             'evento_nombre' => $request->input('evento_nombre', $cotizacion->descripcion ?: ($cotizacion->evento ? $cotizacion->evento->descripcion : '')),
-            'fechas_evento_texto' => $request->input('fechas_evento_texto'),
-            'fecha_montaje_texto' => $request->input('fecha_montaje_texto'),
-            'fecha_desmontaje_texto' => $request->input('fecha_desmontaje_texto'),
-            'espacios_texto' => $request->input('espacios_texto'),
+            'fecha_evento_ini' => $fechaIniObj->format('Y-m-d'),
+            'fecha_evento_fin' => $fechaFinObj->format('Y-m-d'),
+            'fecha_montaje' => $fechaMontajeObj->format('Y-m-d'),
+            'fecha_desmontaje' => $fechaDesmontajeObj->format('Y-m-d'),
+            'fechas_evento_texto' => $fechasEventoTexto,
+            'fecha_montaje_texto' => $fechaMontajeTexto,
+            'fecha_desmontaje_texto' => $fechaDesmontajeTexto,
+            'espacios_texto' => $espacios,
             'plazo' => $request->input('plazo', 'tres (3) días hábiles'),
             'porcentaje_anticipo' => $params['porcentaje_anticipo'] ?? 20,
             'cuenta_anticipo_banco' => $params['cuenta_anticipo_banco'] ?? ($params['cuenta_pago_banco'] ?? 'Banco Unión S.A.'),
@@ -266,7 +324,7 @@ class DocumentoCotizacionController extends Controller
 
         $request->validate($this->reglasValidacionRespuesta());
 
-        $cotizacion = Cotizacion::with(['evento'])->findOrFail($cotizacionId);
+        $cotizacion = Cotizacion::with(['evento', 'tarifas.espacio', 'servicios'])->findOrFail($cotizacionId);
         $data = $this->prepararDatosDocumento($request, $cotizacion, $codigoTipo);
 
         $pdf = $this->crearInstanciaPdf($config['vista'], $data);
@@ -304,7 +362,7 @@ class DocumentoCotizacionController extends Controller
 
         $request->validate($this->reglasValidacionRespuesta());
 
-        $cotizacion = Cotizacion::with(['evento'])->findOrFail($cotizacionId);
+        $cotizacion = Cotizacion::with(['evento', 'tarifas.espacio', 'servicios'])->findOrFail($cotizacionId);
         $plantilla = PlantillaDocumento::where('codigo', $codigoTipo)->first();
         $data = $this->prepararDatosDocumento($request, $cotizacion, $codigoTipo);
 

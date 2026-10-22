@@ -18,7 +18,7 @@ class ReservaController extends Controller
      */
     public function confirmarReserva(Request $request, $cotizacionId)
     {
-        $cotizacion = Cotizacion::with('documentos')->findOrFail($cotizacionId);
+        $cotizacion = Cotizacion::with(['documentos', 'servicios'])->findOrFail($cotizacionId);
 
         $docArrendamiento = $cotizacion->documentos->firstWhere('codigo_tipo', 'RESPUESTA_ARRENDAMIENTO');
         $docServicios = $cotizacion->documentos->firstWhere('codigo_tipo', 'RESPUESTA_SERVICIOS_ADICIONALES');
@@ -29,7 +29,9 @@ class ReservaController extends Controller
             ], 422);
         }
 
-        if (!$docServicios || empty($docServicios->pdf_firmado_path)) {
+        // Solo exigir el documento de Servicios Adicionales si la cotización tiene servicios registrados
+        $tieneServicios = $cotizacion->servicios && $cotizacion->servicios->isNotEmpty();
+        if ($tieneServicios && (!$docServicios || empty($docServicios->pdf_firmado_path))) {
             return response()->json([
                 'message' => 'Requisito pendiente: Debe generar y subir el PDF firmado de la Respuesta a Solicitud de Servicios Adicionales antes de confirmar la reserva.'
             ], 422);

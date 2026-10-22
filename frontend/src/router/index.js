@@ -8,6 +8,7 @@ import CotizacionNuevo from '@/views/admin/cotizacion/CotizacionNuevo.vue';
 import Cotizacion from '@/views/admin/cotizacion/Cotizacion.vue';
 import CotizacionDetalle from '@/views/admin/cotizacion/CotizacionDetalle.vue';
 import UsuarioList from '@/views/admin/usuarios/UsuarioList.vue';
+import EspacioList from '@/views/admin/espacios/EspacioList.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const routes = [
@@ -56,6 +57,14 @@ const routes = [
                 path: 'cotizacion/:id',
                 name: 'cotizacionDetalle',
                 component: CotizacionDetalle
+            },
+            {
+                path: 'espacios',
+                name: 'espacios',
+                component: EspacioList,
+                meta: {
+                    permission: 'catalogos.gestionar'
+                }
             },
             {
                 path: 'usuarios',

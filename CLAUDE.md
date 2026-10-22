@@ -85,10 +85,10 @@ Para evitar problemas de CORS y permitir que el sistema funcione tanto en desarr
   * `rodrigo.flores` | Rol: `Tecnico Legal` | Clave: `RF2026!`
   * `andrea.salazar` | Rol: `Tecnico Legal` | Clave: `AS2026!`
 * **Reglas de Visibilidad en Cotizaciones (Row-Level Security en `Cotizacion::scopeVisiblePara`):**
-  * `Administrador`: Acceso total (`cotizaciones.ver_todas`) y administración de usuarios/roles (`/admin/usuarios`).
+  * `Administrador`: Acceso total (`cotizaciones.ver_todas`) y administración de usuarios/roles (`/admin/usuarios`) y espacios/tarifas (`/admin/espacios`).
   * `Tecnico Comercial`: Solo ve sus propias cotizaciones (`cotizaciones.ver_propias`).
-  * `Tecnico UAF`: Solo ve cotizaciones que tienen pagos con boucher (`uaf.ver_con_boucher`) para registrar C21 y factura.
-  * `Tecnico Legal`: Solo ve cotizaciones con 100% de pagos completados (`legal.ver_pagadas`) para contratos e informes legales.
+  * `Tecnico UAF`: Ve cotizaciones a partir de Reserva Confirmada (`cotizaciones.paso >= 2`, permiso `uaf.ver_con_boucher`) para validar depósitos, registrar C21 y factura.
+  * `Tecnico Legal`: Ve cotizaciones en Revisión Legal o posterior (`cotizaciones.paso >= 6`, permiso `legal.ver_pagadas`) para contratos e informes legales.
 
 ---
 
@@ -127,12 +127,12 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
      * `archivo`: Archivo digital (PDF o imagen).
    * Almacenamiento: `storage/app/public/respaldos`.
 
-2. **Anticipo 20% (Pago de Reserva):**
+2. **Anticipo de Reserva (20% a 100%):**
    * Endpoint: `POST /api/cotizaciones/{id}/registrar-pago`
    * Body (`multipart/form-data`):
      * `banco_id`: ID del banco receptor.
      * `nro_comprobante`: Cadena única por banco.
-     * `monto_pagado`: Importe depositado (validado con el 20% esperado).
+     * `monto_pagado`: Importe depositado (validado entre el 20% mínimo y el 100% máximo del `monto_total`).
      * `fecha_deposito`: Fecha en formato `YYYY-MM-DD`.
      * `boucher`: Imagen del comprobante (`jpeg,png,jpg`).
    * Estado inicial: `pendiente` (para validación de Tesorería/UAF).
@@ -152,18 +152,23 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
 
 * **Backend (`backend/`):**
   * Rutas API: `backend/routes/api.php`
-  * Controladores: `backend/app/Http/Controllers/` (`CotizacionController.php`, `DocumentoCotizacionController.php`, `PagoController.php`, `RespaldoController.php`, `ReunionController.php`)
-  * Modelos: `backend/app/Models/` (`Cotizacion.php`, `CotizacionDocumento.php`, `PlantillaDocumento.php`, `Pago.php`, `Respaldo.php`, `Reunion.php`, `User.php`)
+  * Controladores: `backend/app/Http/Controllers/` (`CotizacionController.php`, `DocumentoCotizacionController.php`, `EspacioController.php`, `PagoController.php`, `RespaldoController.php`, `ReunionController.php`)
+  * Modelos: `backend/app/Models/` (`Cotizacion.php`, `CotizacionDocumento.php`, `PlantillaDocumento.php`, `Espacio.php`, `Tarifa.php`, `Pago.php`, `Respaldo.php`, `Reunion.php`, `User.php`)
   * Vistas Blade PDF: `backend/resources/views/cotizaciones/pdf.blade.php`, `backend/resources/views/documentos/plantilla_base.blade.php`, `backend/resources/views/documentos/respuesta_arrendamiento.blade.php`, `backend/resources/views/documentos/respuesta_servicios_adicionales.blade.php`
-  * Seeders: `backend/database/seeders/UserSeeder.php`, `backend/database/seeders/PlantillaDocumentoSeeder.php`
+  * Seeders: `backend/database/seeders/UserSeeder.php`, `backend/database/seeders/DataSeeder.php`, `backend/database/seeders/PlantillaDocumentoSeeder.php`
 * **Frontend (`frontend/`):**
-  * Vistas: `frontend/src/views/admin/cotizacion/` (`CotizacionNuevo.vue`, `CotizacionDetalle.vue`, `Cotizacion.vue`)
+  * Vistas:
+    * Cotizaciones: `frontend/src/views/admin/cotizacion/` (`CotizacionNuevo.vue`, `CotizacionDetalle.vue`, `Cotizacion.vue`)
+    * Espacios y Tarifas: `frontend/src/views/admin/espacios/EspacioList.vue`
+    * Usuarios y Roles: `frontend/src/views/admin/usuarios/UsuarioList.vue`
   * Componentes Modulares de Cotización (`frontend/src/components/cotizacion/`):
-    * `SeccionDocumentosPaso1.vue`: Tarjetas de presentación de documentos base y notas de respuesta CITE (Arrendamiento y Servicios Adicionales) del Paso 1.
+    * `SeccionDocumentosPaso1.vue`: Tarjetas de presentación de documentos base, notas de respuesta CITE (Arrendamiento y Servicios Adicionales) y previsualización del boucher de depósito (`<Image preview />`) y respaldo del cliente.
     * `ModalDocumentosBase.vue`: Modal autocontenido para subir/actualizar PDFs de Solicitud de Arrendamiento y Verificación de Habilitación.
     * `ModalRespuestaArrendamiento.vue`: Modal autocontenido y parametrizable por `tipoDocumento` (`respuesta-arrendamiento` | `respuesta-servicios-adicionales`) con formulario reactivo, vista previa PDF y emisión del documento.
     * `ModalVisorPdf.vue`: Visor PDF reutilizable en ventana modal.
-  * Servicios: `frontend/src/services/` (`cotizacion.services.js`, `documento.services.js`, `pago.services.js`, `banco.services.js`, `tiporespaldo.services.js`)
+  * Componentes Modulares de Espacios (`frontend/src/components/espacios/`):
+    * `ModalEspacioForm.vue`: Modal reutilizable para crear y editar un `Espacio` junto con su matriz de `Tarifas` (Temporada Baja y Temporada Alta por cada Tipo de Evento).
+  * Servicios: `frontend/src/services/` (`cotizacion.services.js`, `documento.services.js`, `espacio.services.js`, `bloque.services.js`, `tipoespacio.services.js`, `evento.services.js`, `temporada.services.js`, `pago.services.js`, `banco.services.js`, `tiporespaldo.services.js`)
   * Configuración HTTP: `frontend/src/api/axios.js` y `frontend/src/services/ApiService.js`
 
 ---
@@ -186,9 +191,6 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
      docker exec -it gestion_backend_laravel chmod -R 777 storage bootstrap/cache
      docker exec -it gestion_backend_laravel chmod -R 777 vendor/dompdf/dompdf/lib/fonts
      ```
-3. **Cierre del Modal de Confirmación de Reserva:**
-   * Crear `frontend/src/services/reunion.services.js` para llamar a `POST /api/cotizaciones/{id}/reuniones`.
-   * En `CotizacionDetalle.vue`, al confirmar la reserva, llamar al servicio de reunión y actualizar la cotización a `paso: 2` para avanzar el stepper visual.
 
 ---
 
@@ -217,22 +219,18 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
     * **PDF sin firmar (Generación al vuelo):** Al guardar el formulario (`POST /api/cotizaciones/{id}/documentos/{tipo}`), solo se persisten los datos y `snapshot_datos` en la base de datos (**no se guarda archivo en disco**). Cada vez que un usuario necesita ver, descargar o imprimir el documento sin firmar (`GET /api/cotizaciones/{id}/documentos/{documentoId}/pdf`), DomPDF lo genera en memoria al instante.
     * **PDF Firmado (Único almacenado en disco):** Cuando el usuario imprime, hace firmar y sube el PDF escaneado (`POST /api/cotizaciones/{id}/documentos/{tipo}/subir-firmado`), el archivo se guarda físicamente en `storage/app/public/expedientes/{cotizacion_id}/documentos/` (junto a la Solicitud de Arrendamiento y la Verificación de Habilitación).
     * **Bloqueo permanente:** Al subir el PDF firmado se registra `pdf_firmado_path`, `fecha_firma` y `bloqueado = true`, impidiendo cualquier edición posterior tanto en Frontend como en Backend (`422`).
-    * **Requisito para Confirmar Reserva (Paso 2):** Tanto `CotizacionDetalle.vue` como `ReservaController::confirmarReserva()` exigen que **ambos documentos** (`RESPUESTA_ARRENDAMIENTO` y `RESPUESTA_SERVICIOS_ADICIONALES`) cuenten con su `pdf_firmado_path` subido antes de confirmar la reserva.
-  * **Backend (`DocumentoCotizacionController.php`):**
-    * Endpoints dinámicos por `{tipo}` (`GET /api/cotizaciones/{id}/documentos/{tipo}/formulario`, `POST .../preview`, `POST .../{tipo}`, `POST .../{tipo}/subir-firmado`).
-    * Centraliza las reglas de validación en `reglasValidacionRespuesta()` y la creación de la instancia DomPDF con permisos y fuentes en `crearInstanciaPdf(string $vista, array $data)`.
-  * **Servicio Frontend (`frontend/src/services/documento.services.js`):**
-    * `subirDocumentosBase(cotizacionId, formData)`
-    * `getFormularioPorTipo(cotizacionId, tipo)`
-    * `previewPorTipo(cotizacionId, tipo, payload)`
-    * `guardarPorTipo(cotizacionId, tipo, payload)`
-    * `subirFirmadoPorTipo(cotizacionId, tipo, formData)`
-    * `getDocumentoPdf(cotizacionId, documentoId)`
-  * **Componentes Vue 3 (`frontend/src/components/cotizacion/`):**
-    1. `SeccionDocumentosPaso1.vue`: Muestra las tarjetas de documentos del Paso 1 (Solicitud de Arrendamiento, Verificación de Habilitación, Respuesta de Arrendamiento y Respuesta de Servicios Adicionales con sus CITEs, estado de firma y bloqueo).
-    2. `ModalDocumentosBase.vue`: Gestiona selección de archivos PDF, validación de tamaño (máx. 10MB) y subida a `documento.services.js`.
-    3. `ModalRespuestaArrendamiento.vue`: Recibe `:tipoDocumento="tipoDocumentoActivo"` para cargar, previsualizar y emitir de forma independiente tanto la nota de Arrendamiento como la de Servicios Adicionales con su propio CITE y datos.
-    4. `ModalSubirDocumentoFirmado.vue`: Modal modular para adjuntar el PDF escaneado firmado de cualquiera de las 2 notas y bloquear su edición.
-    5. `ModalVisorPdf.vue`: Visor PDF transversal reutilizable para cualquier documento del expediente.
+    * **Requisito para Confirmar Reserva (Paso 2):** Tanto `CotizacionDetalle.vue` como `ReservaController::confirmarReserva()` exigen siempre el PDF firmado de `RESPUESTA_ARRENDAMIENTO`, y exigen además el PDF firmado de `RESPUESTA_SERVICIOS_ADICIONALES` **únicamente si la cotización cuenta con servicios adicionales seleccionados** (`cotizacion.servicios.length > 0`). Si no tiene servicios, la segunda tarjeta no se muestra ni bloquea el paso a reserva.
+
+---
+
+## 11. Gestión Modular de Espacios y Tarifarios (`/admin/espacios`)
+
+* **Patrón de Persistencia (`EspacioController.php`):**
+  * Siguiendo la misma estructura transaccional de `DataSeeder.php`, tanto `store()` como `update()` reciben los campos de `espacios` (`nombre`, `descripcion`, `dias_max`, `area_m2`, `aforo`, `tipo_espacio_id`, `bloque_id`) junto con el arreglo `tarifas` (`[{ evento_id, temporada_id, precio_dia }]`).
+  * El método privado `sincronizarTarifas()` ejecuta `Tarifa::updateOrCreate()` dentro de un `DB::transaction`, permitiendo crear un espacio con su matriz de precios inicial o actualizarla en cualquier momento.
+* **Arquitectura Frontend Modular:**
+  * `EspacioList.vue`: Vista principal con buscador, filtros por `Bloque` y `Tipo de Espacio`, tabla comparativa de precios diarios (Temporada Baja / Alta por cada Tipo de Evento) y eliminación lógica (`SoftDeletes`).
+  * `ModalEspacioForm.vue`: Componente modular desacoplado que gestiona el formulario físico del espacio y la matriz editable de tarifas (`eventos` × `temporadas`), incluyendo la utilidad rápida *"Copiar Baja → Alta"*.
+
 
 

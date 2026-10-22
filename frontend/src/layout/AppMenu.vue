@@ -42,6 +42,9 @@ const model = computed(() => {
 
     // Sección Administración & Análisis
     const adminItems = [];
+    if (authStore.can('catalogos.gestionar')) {
+        adminItems.push({ label: 'Espacios y Tarifas', icon: 'pi pi-fw pi-building', to: '/admin/espacios' });
+    }
     if (authStore.can('usuarios.gestionar')) {
         adminItems.push({ label: 'Usuarios y Roles', icon: 'pi pi-fw pi-users', to: '/admin/usuarios' });
     }

@@ -977,16 +977,16 @@
                         <div
                             class="bg-orange-500/10 border border-orange-500/30 p-4 rounded-xl text-center relative overflow-hidden">
                             <div class="absolute -right-2 -top-2 bg-orange-500/20 w-8 h-8 rounded-full blur-xl"></div>
-                            <span class="text-[9px] text-orange-400 uppercase font-black tracking-tighter">Anticipo
+                            <span class="text-[9px] text-orange-400 uppercase font-black tracking-tighter">Anticipo Mín.
                                 20%</span>
                             <div class="text-lg font-black text-orange-500 mt-1">Bs {{ formatCurrency(anticipoReserva)
                             }}</div>
-                            <span class="text-[8px] text-orange-400/60 block mt-1">Plazo: 2 días hábiles</span>
+                            <span class="text-[8px] text-orange-400/60 block mt-1">Rango: 20% a 100%</span>
                         </div>
                         <!-- Saldo -->
                         <div class="bg-white/5 border border-white/10 p-4 rounded-xl text-center">
-                            <span class="text-[9px] text-white/40 uppercase font-black tracking-tighter">Saldo
-                                80%</span>
+                            <span class="text-[9px] text-white/40 uppercase font-black tracking-tighter">Saldo ({{
+                                porcentajeSaldoReserva }}%)</span>
                             <div class="text-lg font-black text-white mt-1">Bs {{ formatCurrency(saldoReserva) }}</div>
                             <span class="text-[8px] text-white/30 block mt-1">Hasta: {{ formatDateShort(fechaLimitePago)
                             }}</span>
@@ -1075,8 +1075,8 @@
                             style="font-size: 11px !important;"></i>
                         <h4 class="m-0"
                             style="font-size: 12px !important; font-weight: 800 !important; color: #06352c !important; font-family: var(--font-family) !important;">
-                            <span class="dark:text-primary-400">2. Boucher del depósito — anticipo 20% = Bs {{
-                                formatCurrency(anticipoReserva) }}</span>
+                            <span class="dark:text-primary-400">2. Boucher del depósito — mínimo 20% (Bs {{
+                                formatCurrency(anticipoReserva) }}) hasta 100% (Bs {{ formatCurrency(subtotalReserva) }})</span>
                         </h4>
                     </div>
                     <span class="text-surface-400 dark:text-surface-500 text-[10px] font-bold block -mt-3 pl-10">(Cta.
@@ -1142,11 +1142,22 @@
                             </div>
                             <div class="flex flex-col gap-1.5 px-4 py-3 bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 transition-opacity"
                                 :class="{ 'opacity-50 pointer-events-none': !isSeccion2Complete }">
-                                <label
-                                    class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase tracking-widest">
-                                    Monto del boucher (Bs) <span class="text-red-500">*</span>
-                                    <i v-if="!isSeccion2Complete" class="pi pi-lock ml-1 text-[8px] opacity-70"></i>
-                                </label>
+                                <div class="flex items-center justify-between">
+                                    <label
+                                        class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase tracking-widest">
+                                        Monto del boucher (Bs) <span class="text-red-500">*</span>
+                                        <i v-if="!isSeccion2Complete" class="pi pi-lock ml-1 text-[8px] opacity-70"></i>
+                                    </label>
+                                    <span
+                                        class="text-[11px] font-black px-2 py-0.5 rounded-full"
+                                        :class="[
+                                            porcentajePagadoReserva >= 20 && porcentajePagadoReserva <= 100
+                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                : 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                                        ]">
+                                        Pagando: {{ porcentajePagadoReserva }}%
+                                    </span>
+                                </div>
                                 <div class="flex items-stretch border border-surface-300 dark:border-surface-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-surface-800 transition-all"
                                     :class="[
                                         !isSeccion2Complete ? 'opacity-50 pointer-events-none' : 'focus-within:ring-2 focus-within:ring-primary/20',
@@ -1155,9 +1166,10 @@
                                     ]">
                                     <InputNumber v-model="formReserva.monto_deposito" class="flex-1" :unstyled="true"
                                         inputClass="w-full px-4 py-3 border-none font-bold text-lg text-primary dark:text-primary-400 focus:outline-none bg-transparent"
-                                        mode="decimal" :minFractionDigits="2"
+                                        mode="decimal" :minFractionDigits="2" :maxFractionDigits="2"
                                         :placeholder="isSeccion2Complete ? '0.00' : 'Adjunta el boucher primero'"
-                                        :disabled="!isSeccion2Complete" />
+                                        :disabled="!isSeccion2Complete"
+                                        @update:modelValue="verificarMonto" />
                                     <button
                                         class="bg-[#0b3d33] dark:bg-primary-600 text-white px-6 uppercase font-black text-[10px] tracking-widest hover:bg-[#0a4a3e] dark:hover:bg-primary-700 transition-colors disabled:opacity-50 border-l border-white/10"
                                         :disabled="!isSeccion2Complete" @click="verificarMonto">
@@ -1171,8 +1183,8 @@
                                         {{ verificacionMensaje }}
                                     </span>
                                     <span
-                                        class="text-[10px] text-surface-600 dark:text-surface-400 font-bold italic">Esperado
-                                        exacto: Bs {{ formatCurrency(anticipoReserva) }}</span>
+                                        class="text-[10px] text-surface-600 dark:text-surface-400 font-bold italic">Rango
+                                        permitido: Mín. 20% (Bs {{ formatCurrency(anticipoReserva) }}) — Máx. 100% (Bs {{ formatCurrency(subtotalReserva) }})</span>
                                 </div>
                             </div>
                         </div>
@@ -1241,7 +1253,7 @@
                         <li class="flex items-start gap-2">
                             <span class="text-primary dark:text-primary-400 mt-0.5">•</span>
                             <div class="flex flex-col">
-                                <span class="leading-tight">Pago de saldo 80%: <span
+                                <span class="leading-tight">Pago de saldo ({{ porcentajeSaldoReserva }}%): <span
                                         class="text-primary dark:text-primary-400 font-black">Bs {{
                                             formatCurrency(saldoReserva) }}</span></span>
                                 <span class="text-[10px] text-surface-400 dark:text-surface-500 font-medium">Límite: {{
@@ -1609,12 +1621,14 @@ const loadCatalogosReserva = async () => {
 const abrirModalReserva = () => {
     if (!cotizacion.value) return;
 
-    // Validar que los 2 documentos de respuesta hayan sido generados y sus PDFs firmados hayan sido subidos
+    // Validar que los documentos de respuesta requeridos hayan sido generados y sus PDFs firmados hayan sido subidos
     const faltantes = [];
     if (!docRespuestaArrendamiento.value || !docRespuestaArrendamiento.value.pdf_firmado_path) {
         faltantes.push('Respuesta a Solicitud por Arrendamiento (PDF firmado)');
     }
-    if (!docRespuestaServicios.value || !docRespuestaServicios.value.pdf_firmado_path) {
+
+    const tieneServicios = Array.isArray(cotizacion.value.servicios) && cotizacion.value.servicios.length > 0;
+    if (tieneServicios && (!docRespuestaServicios.value || !docRespuestaServicios.value.pdf_firmado_path)) {
         faltantes.push('Respuesta a Solicitud de Servicios Adicionales (PDF firmado)');
     }
 
@@ -1669,10 +1683,26 @@ const confirmarReserva = async () => {
         return;
     }
 
+    // Validar rango del monto depositado (mínimo 20% hasta el 100%)
+    const total = Number(subtotalReserva.value);
+    const minimo = Number(anticipoReserva.value);
+    const ingresado = Number(formReserva.monto_deposito || 0);
+
+    if (ingresado + 0.01 < minimo || ingresado - 0.01 > total) {
+        verificarMonto();
+        toast.add({
+            severity: 'error',
+            summary: 'Monto fuera de rango',
+            detail: `El monto del depósito debe estar entre el 20% (Bs ${formatCurrency(minimo)}) y el 100% (Bs ${formatCurrency(total)}).`,
+            life: 5000
+        });
+        return;
+    }
+
     try {
         savingReserva.value = true;
 
-        // 1. Registrar el Pago (Anticipo 20%)
+        // 1. Registrar el Pago (Anticipo entre 20% y 100%)
         const formDataPago = new FormData();
         formDataPago.append('banco_id', formReserva.banco_id);
         formDataPago.append('nro_comprobante', formReserva.nro_comprobante);
@@ -1715,11 +1745,12 @@ const confirmarReserva = async () => {
         // 6. Refrescar expediente completo
         await fetchCotizacion();
 
-        toast.add({ severity: 'success', summary: '¡Reserva Confirmada!', detail: 'Respaldo, pago del 20% y reunión operativa registrados con éxito. Expediente avanzado al Paso 2.', life: 4000 });
+        toast.add({ severity: 'success', summary: '¡Reserva Confirmada!', detail: `Respaldo, pago del ${porcentajePagadoReserva.value}% y reunión operativa registrados con éxito. Expediente avanzado al Paso 2.`, life: 4000 });
         showModalReserva.value = false;
     } catch (e) {
         console.error(e);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo completar el registro de reserva. Verifique los datos.', life: 3000 });
+        const errMsg = e.response?.data?.error || e.response?.data?.message || 'No se pudo completar el registro de reserva. Verifique los datos.';
+        toast.add({ severity: 'error', summary: 'Error', detail: errMsg, life: 4000 });
     } finally {
         savingReserva.value = false;
     }
@@ -1732,26 +1763,48 @@ const isSeccion2Complete = computed(() => {
         formReserva.fecha_deposito;
 });
 
-const verificarMonto = () => {
-    if (!formReserva.monto_deposito && formReserva.monto_deposito !== 0) return;
+const subtotalReserva = computed(() => Number(cotizacion.value?.monto_total || 0));
+const anticipoReserva = computed(() => Number((subtotalReserva.value * 0.2).toFixed(2)));
+const garantiaReserva = computed(() => Number((subtotalReserva.value * 0.2).toFixed(2)));
 
-    // Comparar con un margen de error pequeño para decimales
-    const esperado = Number(anticipoReserva.value);
+const porcentajePagadoReserva = computed(() => {
+    const total = subtotalReserva.value;
+    if (!total || total <= 0) return 0;
+    const ingresado = Number(formReserva.monto_deposito || 0);
+    const pct = (ingresado / total) * 100;
+    return Number(pct.toFixed(2));
+});
+
+const saldoReserva = computed(() => {
+    const total = subtotalReserva.value;
+    const ingresado = Number(formReserva.monto_deposito || 0);
+    const saldo = Math.max(0, total - ingresado);
+    return Number(saldo.toFixed(2));
+});
+
+const porcentajeSaldoReserva = computed(() => {
+    const pct = Math.max(0, 100 - porcentajePagadoReserva.value);
+    return Number(pct.toFixed(2));
+});
+
+const verificarMonto = () => {
+    if (formReserva.monto_deposito === null || formReserva.monto_deposito === undefined || formReserva.monto_deposito === '') return;
+
+    const total = Number(subtotalReserva.value);
+    const minimo = Number(anticipoReserva.value);
     const ingresado = Number(formReserva.monto_deposito);
 
-    if (Math.abs(esperado - ingresado) < 0.01) {
-        verificacionMensaje.value = '✅ Monto verificado correctamente';
-        verificacionEstado.value = 'success';
-    } else {
-        verificacionMensaje.value = `❌ Monto incorrecto. El boucher debe ser exactamente Bs ${formatCurrency(esperado)}`;
+    if (ingresado + 0.01 < minimo) {
+        verificacionMensaje.value = `❌ Monto insuficiente (${porcentajePagadoReserva.value}%). El mínimo requerido es el 20% (Bs ${formatCurrency(minimo)})`;
         verificacionEstado.value = 'error';
+    } else if (ingresado - 0.01 > total) {
+        verificacionMensaje.value = `❌ Monto excede el total (${porcentajePagadoReserva.value}%). El máximo permitido es el 100% (Bs ${formatCurrency(total)})`;
+        verificacionEstado.value = 'error';
+    } else {
+        verificacionMensaje.value = `✅ Monto válido: equivale al ${porcentajePagadoReserva.value}% del total cotizado`;
+        verificacionEstado.value = 'success';
     }
 };
-
-const subtotalReserva = computed(() => cotizacion.value?.monto_total || 0);
-const anticipoReserva = computed(() => Number((subtotalReserva.value * 0.2).toFixed(2)));
-const saldoReserva = computed(() => Number((subtotalReserva.value * 0.8).toFixed(2)));
-const garantiaReserva = computed(() => Number((subtotalReserva.value * 0.2).toFixed(2)));
 
 const fechaLimitePago = computed(() => {
     if (!cotizacion.value?.fecha_ini) return '-';

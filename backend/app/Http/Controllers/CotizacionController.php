@@ -304,6 +304,9 @@ class CotizacionController extends Controller
             $fFin = isset($cotizacion['fecha_fin']) ? Carbon::parse($cotizacion['fecha_fin'])->translatedFormat('d \d\e F \d\e Y') : date('d \d\e F \d\e Y');
             $cotizacion['fecha_rango'] = $fIni . ' al ' . $fFin;
             $cotizacion['temporada_label'] = 'Vista Previa';
+            $cotizacion['fecha_emision'] = Carbon::now()->translatedFormat('d \d\e F \d\e Y');
+            $cotizacion['anio_gestion'] = Carbon::now()->format('Y');
+            $cotizacion['user_nombre'] = Auth::user()?->name ?? 'Ejecutivo Comercial';
 
             // 2. Hidratar Clientes (Buscar temporal o numérico)
             $clientePrincipal = null;
@@ -436,7 +439,7 @@ class CotizacionController extends Controller
     {
         try {
             app()->setLocale('es');
-            $cotModel = Cotizacion::with(['evento', 'clientes', 'servicios', 'tarifas.espacio'])->findOrFail($id);
+            $cotModel = Cotizacion::with(['user', 'evento', 'clientes', 'servicios', 'tarifas.espacio'])->findOrFail($id);
             
             $cotizacion = [
                 'codigo' => $cotModel->codigo,
@@ -444,6 +447,9 @@ class CotizacionController extends Controller
                 'tipo_evento_nombre' => $cotModel->evento ? $cotModel->evento->descripcion : 'Evento Desconocido',
                 'temporada_label' => 'Cotización Oficial',
                 'descripcion' => $cotModel->descripcion,
+                'fecha_emision' => $cotModel->created_at ? Carbon::parse($cotModel->created_at)->translatedFormat('d \d\e F \d\e Y') : Carbon::now()->translatedFormat('d \d\e F \d\e Y'),
+                'anio_gestion' => $cotModel->created_at ? Carbon::parse($cotModel->created_at)->format('Y') : Carbon::now()->format('Y'),
+                'user_nombre' => $cotModel->user ? $cotModel->user->name : (Auth::user()?->name ?? 'Ejecutivo Comercial'),
             ];
             
             $fIni = Carbon::parse($cotModel->fecha_ini)->translatedFormat('d \d\e F \d\e Y');

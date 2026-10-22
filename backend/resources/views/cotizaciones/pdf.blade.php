@@ -164,7 +164,7 @@
         <!-- banner -->
         <div class="banner">
             <div class="banner-title">Cotización de Arrendamiento</div>
-            <div class="banner-code @if(isset($cotizacion['is_preview'])) text-preview @endif">{{ $cotizacion['codigo'] ?? 'COT-000/2026' }}</div>
+            <div class="banner-code @if(isset($cotizacion['is_preview'])) text-preview @endif">{{ $cotizacion['codigo'] ?? 'S/N' }}</div>
         </div>
 
         <!-- Meta info -->
@@ -173,16 +173,16 @@
                 <td>
                     <div class="meta-label">Cliente</div>
                     <div class="meta-value">{{ $cotizacion['entidad_nombre'] ?? 'S/N' }}</div>
-                    <div class="meta-sub">NIT: {{ $cotizacion['nit'] ?? '9222358A' }}</div>
+                    <div class="meta-sub">NIT: {{ $cotizacion['nit'] ?? '-' }}</div>
                 </td>
                 <td>
                     <div class="meta-label">Contacto</div>
-                    <div class="meta-value">{{ $cotizacion['contacto_nombre'] ?? 'Juan Perez' }}</div>
-                    <div class="meta-sub">{{ $cotizacion['telefono'] ?? '73767252' }}</div>
+                    <div class="meta-value">{{ $cotizacion['contacto_nombre'] ?? '-' }}</div>
+                    <div class="meta-sub">{{ $cotizacion['telefono'] ?? '-' }}</div>
                 </td>
                 <td>
                     <div class="meta-label">Tipo de Evento</div>
-                    <div class="meta-value">{{ $cotizacion['tipo_evento_nombre'] ?? 'Feria' }}</div>
+                    <div class="meta-value">{{ $cotizacion['tipo_evento_nombre'] ?? '-' }}</div>
                 </td>
                 <td>
                     <div class="meta-label">Fecha(s)</div>
@@ -191,8 +191,8 @@
                 </td>
                 <td>
                     <div class="meta-label">Emisión</div>
-                    <div class="meta-value">{{ now()->translatedFormat('d \d\e F \d\e Y') }}</div>
-                    <div class="meta-sub">Patricia Castillo<br>Santander</div>
+                    <div class="meta-value">{{ $cotizacion['fecha_emision'] ?? now()->translatedFormat('d \d\e F \d\e Y') }}</div>
+                    <div class="meta-sub">{{ $cotizacion['user_nombre'] ?? 'Ejecutivo Comercial' }}</div>
                 </td>
             </tr>
         </table>
@@ -273,8 +273,8 @@
         </div>
 
         <div class="legal">
-            Es importante coordinar previamente con el personal dependiente del Campo Ferial Chuquiago Marca, la fecha y horario de instalación y adecuación de los ambientes (si corresponde).<br>
-            Finalmente, cabe señalar que la factura correspondiente será emita según los datos que se solicite el arrendatario.
+            Es importante coordinar previamente con el personal dependiente del Campo Ferial Chuquiago Marka, la fecha y horario de instalación y adecuación de los ambientes (si corresponde).<br>
+            Finalmente, cabe señalar que la factura correspondiente será emitida según los datos que solicite el arrendatario.
         </div>
     </div>
 
@@ -282,9 +282,9 @@
     <div class="footer-fixed">
         <table class="footer-table">
             <tr>
-                <td>Campo Ferial Chuquiago Marka - Gestión 2026</td>
+                <td>Campo Ferial Chuquiago Marka - Gestión {{ $cotizacion['anio_gestion'] ?? date('Y') }}</td>
                 <td class="footer-center">www.chuquiagomarka.com.bo - www.ucpp.gob.bo</td>
-                <td class="footer-right @if(isset($cotizacion['is_preview'])) text-preview @endif">{{ $cotizacion['codigo'] ?? 'COT-000/2026' }}</td>
+                <td class="footer-right @if(isset($cotizacion['is_preview'])) text-preview @endif">{{ $cotizacion['codigo'] ?? 'S/N' }}</td>
             </tr>
         </table>
         <div class="brand-stripes">

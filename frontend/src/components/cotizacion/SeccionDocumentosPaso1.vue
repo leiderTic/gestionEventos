@@ -214,7 +214,7 @@
                 </div>
             </div>
 
-            <div v-else
+            <div v-else-if="tieneServicios"
                 class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg bg-surface-0 dark:bg-surface-800 border border-dashed border-surface-300 dark:border-surface-700 gap-3">
                 <div class="flex items-center gap-2.5 min-w-0">
                     <div
@@ -233,11 +233,128 @@
                     @click="$emit('abrir-respuesta-servicios')" />
             </div>
         </div>
+
+        <!-- COMPROBANTES Y RESPALDOS DE CONFIRMACIÓN DE RESERVA (PASO 2) -->
+        <div v-if="pagoInicial || respaldoInicial"
+            class="pt-3 border-t border-surface-200 dark:border-surface-700 space-y-2.5">
+            <div
+                class="flex items-center gap-2 text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wider">
+                <i class="pi pi-verified text-emerald-600"></i>
+                <span>Respaldo y Comprobante de Confirmación de Reserva</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- 1. Boucher del Depósito (Imagen con PrimeVue Image preview igual al modal de confirmación) -->
+                <div v-if="pagoInicial"
+                    class="p-3 rounded-xl bg-surface-0 dark:bg-surface-800 border border-emerald-200 dark:border-emerald-800/60 shadow-xs flex flex-col justify-between gap-2.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                                <i class="pi pi-wallet text-sm"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">
+                                    Boucher de Depósito ({{ porcentajePagoInicial }}%)
+                                </p>
+                                <p class="text-[10px] text-muted-color m-0 truncate">
+                                    {{ pagoInicial.banco?.nombre || 'Banco' }} · N° {{ pagoInicial.nro_comprobante }} ·
+                                    <b class="text-emerald-600 dark:text-emerald-400">Bs {{ formatMoney(pagoInicial.monto_pagado) }}</b>
+                                </p>
+                            </div>
+                        </div>
+                        <span :class="[
+                            'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex-shrink-0',
+                            pagoInicial.estado === 'verificado'
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                        ]">
+                            {{ pagoInicial.estado || 'Pendiente' }}
+                        </span>
+                    </div>
+
+                    <!-- Miniatura interactiva idéntica al modal de confirmación -->
+                    <div v-if="pagoInicial.boucher_path"
+                        class="relative group rounded-xl overflow-hidden border-2 border-emerald-500/30 bg-surface-50 dark:bg-surface-900 shadow-sm">
+                        <Image :src="getStorageUrl(pagoInicial.boucher_path)" preview
+                            class="w-full h-[140px] object-cover block"
+                            imageClass="w-full h-[140px] object-cover rounded-xl cursor-pointer" />
+                        <div
+                            class="absolute bottom-0 inset-x-0 bg-black/60 px-3 py-1.5 flex items-center justify-between backdrop-blur-sm pointer-events-none">
+                            <span class="text-[10px] text-white font-bold truncate">
+                                Depósito: {{ formatDateShort(pagoInicial.fecha_deposito) }}
+                            </span>
+                            <span class="text-[10px] text-emerald-300 font-bold flex items-center gap-1">
+                                <i class="pi pi-search-plus text-[10px]"></i> Click en la imagen para ampliar
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Respaldo de Aceptación del Cliente (PDF o Imagen) -->
+                <div v-if="respaldoInicial"
+                    class="p-3 rounded-xl bg-surface-0 dark:bg-surface-800 border border-purple-200 dark:border-purple-800/60 shadow-xs flex flex-col justify-between gap-2.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
+                                <i :class="['text-sm', esImagen(respaldoInicial.archivo_path) ? 'pi pi-image' : 'pi pi-file-pdf']"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">
+                                    Respaldo de Aceptación del Cliente
+                                </p>
+                                <p class="text-[10px] text-muted-color m-0 truncate">
+                                    Tipo: <b class="text-surface-700 dark:text-surface-200">{{ respaldoInicial.tipo_respaldo?.descripcion || respaldoInicial.tipoRespaldo?.descripcion || 'Respaldo Oficial' }}</b>
+                                </p>
+                            </div>
+                        </div>
+                        <span
+                            class="bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                            {{ esImagen(respaldoInicial.archivo_path) ? 'Imagen' : 'PDF' }}
+                        </span>
+                    </div>
+
+                    <!-- Si el respaldo subido es una imagen: usar el mismo visor <Image preview /> -->
+                    <div v-if="esImagen(respaldoInicial.archivo_path)"
+                        class="relative group rounded-xl overflow-hidden border-2 border-purple-500/30 bg-surface-50 dark:bg-surface-900 shadow-sm">
+                        <Image :src="getStorageUrl(respaldoInicial.archivo_path)" preview
+                            class="w-full h-[140px] object-cover block"
+                            imageClass="w-full h-[140px] object-cover rounded-xl cursor-pointer" />
+                        <div
+                            class="absolute bottom-0 inset-x-0 bg-black/60 px-3 py-1.5 flex items-center justify-between backdrop-blur-sm pointer-events-none">
+                            <span class="text-[10px] text-white font-bold truncate">
+                                {{ respaldoInicial.tipo_respaldo?.descripcion || 'Respaldo de aceptación' }}
+                            </span>
+                            <span class="text-[10px] text-purple-300 font-bold flex items-center gap-1">
+                                <i class="pi pi-search-plus text-[10px]"></i> Click en la imagen para ampliar
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Si el respaldo subido es un PDF: mostrar tarjeta con botón Ver PDF -->
+                    <div v-else
+                        class="flex-1 flex flex-col items-center justify-center p-4 rounded-xl bg-purple-50/40 dark:bg-purple-950/20 border border-dashed border-purple-200 dark:border-purple-800/60 gap-2">
+                        <i class="pi pi-file-pdf text-2xl text-purple-600 dark:text-purple-400"></i>
+                        <span class="text-[11px] font-semibold text-surface-600 dark:text-surface-300 text-center">
+                            Documento PDF de respaldo adjunto al confirmar la reserva
+                        </span>
+                        <Button label="Ver Respaldo PDF" icon="pi pi-eye" size="small"
+                            class="!text-xs !py-1.5 !px-3.5 font-bold !bg-purple-600 hover:!bg-purple-700 !text-white !border-none flex items-center gap-1.5 shadow-xs mt-1"
+                            @click="$emit('ver-pdf', {
+                                titulo: 'Respaldo de Aceptación del Cliente',
+                                subtitulo: 'Tipo: ' + (respaldoInicial.tipo_respaldo?.descripcion || respaldoInicial.tipoRespaldo?.descripcion || 'Respaldo Oficial'),
+                                path: respaldoInicial.archivo_path
+                            })" />
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import documentoServices from '@/services/documento.services';
 
@@ -266,6 +383,44 @@ const emit = defineEmits([
 
 const toast = useToast();
 const cargandoPdfId = ref(null);
+
+const tieneServicios = computed(() => {
+    return Array.isArray(props.cotizacion?.servicios) && props.cotizacion.servicios.length > 0;
+});
+
+const pagoInicial = computed(() => {
+    if (!Array.isArray(props.cotizacion?.pagos) || props.cotizacion.pagos.length === 0) return null;
+    return props.cotizacion.pagos[0];
+});
+
+const porcentajePagoInicial = computed(() => {
+    if (!pagoInicial.value || !props.cotizacion?.monto_total) return 20;
+    const total = Number(props.cotizacion.monto_total);
+    if (total <= 0) return 20;
+    return Number(((Number(pagoInicial.value.monto_pagado || 0) / total) * 100).toFixed(2));
+});
+
+const respaldoInicial = computed(() => {
+    if (!Array.isArray(props.cotizacion?.respaldos) || props.cotizacion.respaldos.length === 0) return null;
+    return props.cotizacion.respaldos[props.cotizacion.respaldos.length - 1];
+});
+
+const getStorageUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http') || path.startsWith('blob:')) return path;
+    const baseUrl = import.meta.env.VITE_URL_SERVIDOR?.replace('/api', '') || 'http://localhost:8081';
+    return `${baseUrl}/storage/${path}`;
+};
+
+const esImagen = (path) => {
+    if (!path) return false;
+    return /\.(jpg|jpeg|png|webp|gif)$/i.test(path);
+};
+
+const formatMoney = (val) => {
+    const num = Number(val || 0);
+    return num.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 const esFirmado = (doc) => {
     return !!(doc && (doc.bloqueado || doc.pdf_firmado_path));

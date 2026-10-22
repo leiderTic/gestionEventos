@@ -153,8 +153,8 @@ class Cotizacion extends Model
      * Visibilidad por rol (Row-Level Security). Para usuarios con varios roles se combinan con OR.
      *  - cotizaciones.ver_todas  → sin filtro (Administrador)
      *  - cotizaciones.ver_propias → solo las creadas por el usuario (Técnico Comercial)
-     *  - uaf.ver_con_boucher      → con al menos un pago con boucher (Técnico UAF)
-     *  - legal.ver_pagadas        → pagos (no rechazados) cubren el 100% del total (Técnico Legal)
+     *  - uaf.ver_con_boucher      → cotizaciones a partir del estado/paso 2: Reserva Confirmada (Técnico UAF)
+     *  - legal.ver_pagadas        → cotizaciones en estado de revisión legal o pagadas (Técnico Legal)
      */
     public function scopeVisiblePara($query, ?User $user)
     {
@@ -172,18 +172,10 @@ class Cotizacion extends Model
                 $q->orWhere('cotizaciones.user_id', $user->id);
             }
             if ($user->can('uaf.ver_con_boucher')) {
-                $q->orWhereHas('pagos', fn ($p) => $p->whereNotNull('boucher_path'));
+                $q->orWhere('cotizaciones.paso', '>=', 2);
             }
             if ($user->can('legal.ver_pagadas')) {
-                $q->orWhereRaw(
-                    "cotizaciones.monto_total > 0 AND (
-                        SELECT COALESCE(SUM(p.monto_pagado), 0)
-                        FROM pagos p
-                        JOIN cotizacion_pago cp ON cp.pago_id = p.id
-                        WHERE cp.cotizacion_id = cotizaciones.id
-                          AND (p.estado IS NULL OR p.estado <> 'rechazado')
-                    ) >= cotizaciones.monto_total"
-                );
+                $q->orWhere('cotizaciones.paso', '>=', 6);
             }
         });
     }
