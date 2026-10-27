@@ -13,6 +13,9 @@ export default {
     actualizar: (id, espacio) => {
         return Api().put(`espacios/${id}`, espacio);
     },
+    actualizarTarifas: (id, tarifas) => {
+        return Api().put(`espacios/${id}/tarifas`, { tarifas });
+    },
     eliminar: (id) => {
         return Api().delete(`espacios/${id}`);
     }

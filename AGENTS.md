@@ -84,11 +84,13 @@ Para evitar problemas de CORS y permitir que el sistema funcione tanto en desarr
   * `elena.quispe` | Rol: `Tecnico Legal` | Clave: `EQ2026!`
   * `rodrigo.flores` | Rol: `Tecnico Legal` | Clave: `RF2026!`
   * `andrea.salazar` | Rol: `Tecnico Legal` | Clave: `AS2026!`
-* **Reglas de Visibilidad en Cotizaciones (Row-Level Security en `Cotizacion::scopeVisiblePara`):**
-  * `Administrador`: Acceso total (`cotizaciones.ver_todas`) y administración de usuarios/roles (`/admin/usuarios`) y espacios/tarifas (`/admin/espacios`).
-  * `Tecnico Comercial`: Solo ve sus propias cotizaciones (`cotizaciones.ver_propias`).
-  * `Tecnico UAF`: Ve cotizaciones a partir de Reserva Confirmada (`cotizaciones.paso >= 2`, permiso `uaf.ver_con_boucher`) para validar depósitos, registrar C21 y factura.
-  * `Tecnico Legal`: Ve cotizaciones en Revisión Legal o posterior (`cotizaciones.paso >= 6`, permiso `legal.ver_pagadas`) para contratos e informes legales.
+* **Reglas de Visibilidad en Cotizaciones (Row-Level Security en `Cotizacion.php`):**
+  * **Cartera Comercial Propia (`scopePropias`, ruta `/admin/cotizacion/mias` → `?scope=propias`):** Exclusiva para el rol `Tecnico Comercial` (`cotizaciones.ver_propias` / `cotizaciones.crear`). Filtra estrictamente `user_id = Auth::id()`, mostrando en blanco si el ejecutivo aún no emitió cotizaciones propias.
+  * **Bandeja Institucional de Seguimiento (`scopeBandejaInstitucional`, ruta `/admin/cotizacion` → `?scope=bandeja`):** Para roles de supervisión y revisión por área (oculta el botón `+ Nueva Cotización` y reutiliza el componente modular `TablaCotizaciones.vue`):
+    * `Administrador`: Acceso total (`cotizaciones.ver_todas`) y administración de usuarios/roles (`/admin/usuarios`) y espacios/tarifas (`/admin/espacios`).
+    * `Tecnico UAF`: Ve cotizaciones a partir de Reserva Confirmada (`cotizaciones.paso >= 2`, permiso `uaf.ver_con_boucher`) para validar depósitos, registrar C21 y factura.
+    * `Tecnico Legal`: Ve cotizaciones en Revisión Legal o posterior (`cotizaciones.paso >= 6`, permiso `legal.ver_pagadas`) para contratos e informes legales.
+  * **Visibilidad General (`scopeVisiblePara`):** Combina alcances para el `Dashboard` y acceso al detalle de expediente.
 
 ---
 
@@ -167,7 +169,8 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
     * `ModalRespuestaArrendamiento.vue`: Modal autocontenido y parametrizable por `tipoDocumento` (`respuesta-arrendamiento` | `respuesta-servicios-adicionales`) con formulario reactivo, vista previa PDF y emisión del documento.
     * `ModalVisorPdf.vue`: Visor PDF reutilizable en ventana modal.
   * Componentes Modulares de Espacios (`frontend/src/components/espacios/`):
-    * `ModalEspacioForm.vue`: Modal reutilizable para crear y editar un `Espacio` junto con su matriz de `Tarifas` (Temporada Baja y Temporada Alta por cada Tipo de Evento).
+    * `ModalEspacioForm.vue`: Ventana modal dedicada exclusivamente al CRUD de los datos físicos y clasificación de un `Espacio` (`nombre`, `tipo_espacio_id`, `bloque_id`, `area_m2`, `aforo`, `dias_max`, `descripcion`).
+    * `ModalEspacioTarifas.vue`: Ventana modal independiente dedicada exclusivamente a la asignación de costos por día (`PUT /api/espacios/{id}/tarifas`) en Temporada Baja y Temporada Alta por Tipo de Evento.
   * Servicios: `frontend/src/services/` (`cotizacion.services.js`, `documento.services.js`, `espacio.services.js`, `bloque.services.js`, `tipoespacio.services.js`, `evento.services.js`, `temporada.services.js`, `pago.services.js`, `banco.services.js`, `tiporespaldo.services.js`)
   * Configuración HTTP: `frontend/src/api/axios.js` y `frontend/src/services/ApiService.js`
 
@@ -225,12 +228,13 @@ Al pulsar el botón **"Confirmar Reserva / Registrar Anticipo"**, el modal ejecu
 
 ## 11. Gestión Modular de Espacios y Tarifarios (`/admin/espacios`)
 
-* **Patrón de Persistencia (`EspacioController.php`):**
-  * Siguiendo la misma estructura transaccional de `DataSeeder.php`, tanto `store()` como `update()` reciben los campos de `espacios` (`nombre`, `descripcion`, `dias_max`, `area_m2`, `aforo`, `tipo_espacio_id`, `bloque_id`) junto con el arreglo `tarifas` (`[{ evento_id, temporada_id, precio_dia }]`).
-  * El método privado `sincronizarTarifas()` ejecuta `Tarifa::updateOrCreate()` dentro de un `DB::transaction`, permitiendo crear un espacio con su matriz de precios inicial o actualizarla en cualquier momento.
-* **Arquitectura Frontend Modular:**
-  * `EspacioList.vue`: Vista principal con buscador, filtros por `Bloque` y `Tipo de Espacio`, tabla comparativa de precios diarios (Temporada Baja / Alta por cada Tipo de Evento) y eliminación lógica (`SoftDeletes`).
-  * `ModalEspacioForm.vue`: Componente modular desacoplado que gestiona el formulario físico del espacio y la matriz editable de tarifas (`eventos` × `temporadas`), incluyendo la utilidad rápida *"Copiar Baja → Alta"*.
+* **Separación de Responsabilidades en Backend (`EspacioController.php`):**
+  * **CRUD de Espacio:** `POST /api/espacios` (`store`) y `PUT /api/espacios/{id}` (`update`) gestionan exclusivamente los campos propios de la tabla `espacios` (`nombre`, `descripcion`, `dias_max`, `area_m2`, `aforo`, `tipo_espacio_id`, `bloque_id`).
+  * **Asignación de Costos:** `PUT /api/espacios/{id}/tarifas` (`actualizarTarifas`) gestiona en una transacción independiente la matriz de costos (`Tarifa::updateOrCreate()`) para cada combinación `evento_id` y `temporada_id`.
+* **Arquitectura Frontend Modular (`frontend/src/components/espacios/`):**
+  * `EspacioList.vue`: Vista de listado limpia con buscador, filtros por `Bloque` y `Tipo`, resumen de rango de costos y acciones separadas.
+  * `ModalEspacioForm.vue`: Ventana dedicada a crear o editar los datos del espacio. Al registrar un espacio nuevo, abre automáticamente la ventana de costos para completar su configuración.
+  * `ModalEspacioTarifas.vue`: Ventana dedicada exclusivamente a asignar o modificar los precios diarios en Temporada Baja y Temporada Alta por cada Tipo de Evento.
 
 
 

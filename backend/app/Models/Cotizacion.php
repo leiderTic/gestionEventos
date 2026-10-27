@@ -150,11 +150,49 @@ class Cotizacion extends Model
     }
 
     /**
-     * Visibilidad por rol (Row-Level Security). Para usuarios con varios roles se combinan con OR.
-     *  - cotizaciones.ver_todas  → sin filtro (Administrador)
-     *  - cotizaciones.ver_propias → solo las creadas por el usuario (Técnico Comercial)
-     *  - uaf.ver_con_boucher      → cotizaciones a partir del estado/paso 2: Reserva Confirmada (Técnico UAF)
-     *  - legal.ver_pagadas        → cotizaciones en estado de revisión legal o pagadas (Técnico Legal)
+     * Alcance exclusivo para la cartera personal del Ejecutivo Comercial (Mis Cotizaciones).
+     * Retorna únicamente las cotizaciones creadas por el usuario autenticado.
+     */
+    public function scopePropias($query, ?User $user)
+    {
+        if (!$user || (!$user->can('cotizaciones.ver_propias') && !$user->can('cotizaciones.crear') && !$user->can('cotizaciones.ver_todas'))) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('cotizaciones.user_id', $user->id);
+    }
+
+    /**
+     * Alcance para la bandeja institucional de seguimiento y revisión por áreas
+     * (Administración, Tesorería/UAF, Asesoría Jurídica).
+     */
+    public function scopeBandejaInstitucional($query, ?User $user)
+    {
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($user->can('cotizaciones.ver_todas')) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($user) {
+            $q->whereRaw('1 = 0');
+
+            if ($user->can('uaf.ver_con_boucher')) {
+                $q->orWhere('cotizaciones.paso', '>=', 2);
+            }
+            if ($user->can('legal.ver_pagadas')) {
+                $q->orWhere('cotizaciones.paso', '>=', 6);
+            }
+        });
+    }
+
+    /**
+     * Visibilidad general combinada (Row-Level Security para detalle y métricas globales).
+     *  - cotizaciones.ver_todas   → sin filtro (Administrador)
+     *  - cotizaciones.ver_propias → creadas por el usuario (Técnico Comercial)
+     *  - uaf.ver_con_boucher      → a partir del paso 2 (Técnico UAF)
+     *  - legal.ver_pagadas        → a partir del paso 6 (Técnico Legal)
      */
     public function scopeVisiblePara($query, ?User $user)
     {

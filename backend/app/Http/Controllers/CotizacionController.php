@@ -18,13 +18,22 @@ use App\Models\CotizacionHistorial;
 
 class CotizacionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $query = Cotizacion::with(['user', 'evento', 'clientes', 'servicios', 'tarifas.evento', 'tarifas.espacio'])
-            ->visiblePara(Auth::user())
-            ->orderBy('created_at', 'desc');
+        $user = Auth::user();
+        $scope = $request->query('scope');
 
-        $cotizaciones = $query->get();
+        $query = Cotizacion::with(['user', 'evento', 'clientes', 'servicios', 'tarifas.evento', 'tarifas.espacio']);
+
+        if ($scope === 'propias') {
+            $query->propias($user);
+        } elseif ($scope === 'bandeja') {
+            $query->bandejaInstitucional($user);
+        } else {
+            $query->visiblePara($user);
+        }
+
+        $cotizaciones = $query->orderBy('created_at', 'desc')->get();
         return response()->json($cotizaciones);
     }
 

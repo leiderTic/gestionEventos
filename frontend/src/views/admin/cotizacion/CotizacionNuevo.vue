@@ -6,10 +6,10 @@
 
             <!-- Lista de Pestañas (Header del Wizard) -->
             <StepList class="bg-surface-0 dark:bg-surface-900 border-b border-surface">
-                <Step :value="0">1 Datos del Evento</Step>
-                <Step :value="1">2 Espacios</Step>
-                <Step :value="2">3 Servicios</Step>
-                <Step :value="3">4 Resumen</Step>
+                <Step :value="1">Datos del Evento</Step>
+                <Step :value="2">Espacios</Step>
+                <Step :value="3">Servicios</Step>
+                <Step :value="4">Resumen</Step>
             </StepList>
 
             <!-- Contenedor general de todos los Paneles (Vistas de cada paso) -->
@@ -18,394 +18,363 @@
                 <!-- ============================================== -->
                 <!-- PASO 1: DATOS DEL EVENTO                       -->
                 <!-- ============================================== -->
-                <StepPanel :value="0" v-slot="{ activateCallback }">
-                    <div class="flex flex-col gap-8">
-                        <div class="grid grid-cols-12 gap-8 lg:gap-12">
+                <StepPanel :value="1" v-slot="{ activateCallback }">
+                    <div class="flex flex-col gap-6">
+                        <div class="grid grid-cols-12 gap-6 lg:gap-8">
 
-                            <!-- COLUMNA IZQUIERDA: Búsqueda y Selección de Clientes/Instituciones -->
-                            <div
-                                class="col-span-12 lg:col-span-7 flex flex-col gap-6 border-b lg:border-b-0 lg:border-r border-surface pb-6 lg:pb-0 lg:pr-10">
+                            <!-- COLUMNA IZQUIERDA: Cliente / Institución y Documentos Base -->
+                            <div class="col-span-12 lg:col-span-7 flex flex-col gap-6 lg:border-r border-surface-200 dark:border-surface-800 lg:pr-8">
 
-                                <!-- BLOQUE 1: Información de Entidad (Cliente Principal) -->
-                                <div class="flex flex-col gap-3">
-                                    <label
-                                        class="font-bold text-surface-900 dark:text-surface-0 mb-1 lg:text-lg">Información
-                                        del Cliente / Institución</label>
+                                <!-- BLOQUE 1: Cliente / Institución -->
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-sm font-bold text-surface-900 dark:text-surface-0">
+                                            Cliente o Institución Solicitante <span class="text-red-500">*</span>
+                                        </label>
+                                        <span class="text-xs text-surface-500">
+                                            Persona natural o entidad jurídica
+                                        </span>
+                                    </div>
 
-                                    <!-- Buscador Principal -->
                                     <div class="flex gap-2 items-start w-full">
-                                        <Select v-model="cotizacion.entidad_id" :options="entidades" optionValue="id"
-                                            filter placeholder="Seleccione un cliente o institución" class="flex-1"
-                                            @change="onEntidadChange">
-                                            <!-- Personalización de cómo se ve la opción seleccionada contraída -->
+                                        <Select
+                                            v-model="cotizacion.entidad_id"
+                                            :options="entidades"
+                                            optionValue="id"
+                                            filter
+                                            placeholder="Buscar por nombre, razón social o NIT/CI..."
+                                            class="flex-1"
+                                            @change="onEntidadChange"
+                                        >
                                             <template #value="slotProps">
                                                 <div v-if="slotProps.value" class="flex items-center gap-2 font-medium">
-                                                    <i :class="selectedEntidad?.tipo === 'institucion' ? 'pi pi-building' : 'pi pi-user'"
-                                                        class="text-primary hidden sm:inline"></i>
+                                                    <i
+                                                        :class="selectedEntidad?.tipo === 'institucion' ? 'pi pi-building' : 'pi pi-user'"
+                                                        class="text-surface-500 text-xs"
+                                                    ></i>
                                                     <span class="truncate">{{ selectedEntidad?.nombre }}</span>
                                                 </div>
                                                 <span v-else>{{ slotProps.placeholder }}</span>
                                             </template>
-                                            <!-- Personalización de cómo se ve cada opción en la lista desplegable -->
                                             <template #option="slotProps">
-                                                <div class="flex flex-col">
-                                                    <span
-                                                        class="text-[0.7rem] text-muted-color tracking-wider uppercase font-bold">{{
-                                                            slotProps.option.nit || 'S/N' }} &bull; {{ slotProps.option.tipo
-                                                        }}</span>
-                                                    <span class="font-medium text-surface-900 dark:text-surface-0">{{
-                                                        slotProps.option.nombre }}</span>
+                                                <div class="flex items-center justify-between gap-3 w-full">
+                                                    <span class="font-medium text-surface-900 dark:text-surface-0 text-sm">
+                                                        {{ slotProps.option.nombre }}
+                                                    </span>
+                                                    <span class="text-xs text-surface-500 font-mono">
+                                                        {{ slotProps.option.nit || 'S/N' }} · {{ slotProps.option.tipo === 'institucion' ? 'Institución' : 'Persona' }}
+                                                    </span>
                                                 </div>
                                             </template>
                                         </Select>
-                                        <Button label="Nuevo" icon="pi pi-user-plus" severity="primary"
-                                            @click="openModalNuevaEntidad" />
+                                        <Button
+                                            label="Registrar cliente"
+                                            icon="pi pi-plus"
+                                            severity="secondary"
+                                            outlined
+                                            @click="openModalNuevaEntidad"
+                                        />
                                     </div>
 
-                                    <!-- Tarjeta Visual que aparece CUANDO hay una entidad seleccionada -->
-                                    <div v-if="selectedEntidad"
-                                        class="border border-surface shadow-sm rounded-xl p-5 bg-surface-0 dark:bg-surface-900 relative mt-2 transition-all">
-
-                                        <!-- Botones de Acción Agrupados en Top-Right (Editar y Cerrar) -->
-                                        <div class="absolute top-3 right-3 flex items-center">
-                                            <Button icon="pi pi-pencil" text rounded
-                                                class="w-8 h-8 !p-0 text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/40"
-                                                aria-label="Editar" />
-                                            <Button icon="pi pi-times" text rounded
-                                                class="w-8 h-8 !p-0 text-surface-400 hover:text-surface-800 dark:hover:text-surface-200"
-                                                aria-label="Remover" @click="deseleccionarEntidad" />
-                                        </div>
-
-                                        <!-- Información Principal de la Entidad -->
-                                        <div class="flex items-center gap-4 mb-4 pr-16 text-balance">
-                                            <Avatar
-                                                :icon="selectedEntidad.tipo === 'institucion' ? 'pi pi-building' : 'pi pi-user'"
-                                                size="large" shape="circle" class="bg-primary text-primary-contrast" />
-                                            <div class="flex flex-col">
+                                    <!-- Ficha compacta del cliente seleccionado -->
+                                    <div
+                                        v-if="selectedEntidad"
+                                        class="mt-1 border border-surface-200 dark:border-surface-700 rounded-lg p-3.5 bg-surface-50 dark:bg-surface-800/50 flex items-start justify-between gap-3"
+                                    >
+                                        <div class="flex flex-col gap-1 min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-sm text-surface-900 dark:text-surface-0">
+                                                    {{ selectedEntidad.nombre }}
+                                                </span>
+                                                <span class="text-xs px-2 py-0.5 rounded bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 font-medium">
+                                                    {{ selectedEntidad.tipo === 'institucion' ? 'Institución' : 'Persona Natural' }}
+                                                </span>
                                                 <span
-                                                    class="font-bold text-lg text-surface-900 dark:text-surface-0 leading-tight">{{
-                                                        selectedEntidad.nombre
-                                                    }}</span>
-                                                <span
-                                                    class="text-sm text-primary font-medium flex items-center gap-1 mt-1"><i
-                                                        class="pi pi-id-card text-xs"></i> {{ selectedEntidad.nit ||
-                                                            'Sin CI/NIT' }}</span>
-                                                <!-- Pastilla visual para indicar si fue creado en el Wizard (está en memoria) -->
-                                                <span v-if="selectedEntidad.isNew"
-                                                    class="text-[0.6rem] uppercase tracking-wider font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded inline-block w-max mt-2">En
-                                                    borrador</span>
+                                                    v-if="selectedEntidad.isNew"
+                                                    class="text-[11px] font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded"
+                                                >
+                                                    Nuevo
+                                                </span>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-600 dark:text-surface-400">
+                                                <span><strong>CI/NIT:</strong> {{ selectedEntidad.nit || 'No registrado' }}</span>
+                                                <span v-if="selectedEntidad.tipo === 'cliente' && selectedEntidad.telefono">
+                                                    <strong>Tel:</strong> {{ selectedEntidad.telefono }}
+                                                </span>
+                                                <span v-if="selectedEntidad.tipo === 'cliente' && selectedEntidad.email">
+                                                    <strong>Correo:</strong> {{ selectedEntidad.email }}
+                                                </span>
                                             </div>
                                         </div>
 
-                                        <!-- Footer de Tarjeta: Mostrar Email y Teléfono directamente si es Cliente (Persona) -->
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-surface-600 dark:text-surface-400 border-t border-surface pt-4"
-                                            v-if="selectedEntidad.tipo === 'cliente'">
-                                            <div
-                                                class="flex items-center gap-2 font-medium bg-surface-100 dark:bg-surface-800 p-2.5 rounded-lg">
-                                                <i class="pi pi-envelope text-primary"></i> <span class="truncate">{{
-                                                    selectedEntidad.email || '—'
-                                                }}</span>
-                                            </div>
-                                            <div
-                                                class="flex items-center gap-2 font-medium bg-surface-100 dark:bg-surface-800 p-2.5 rounded-lg">
-                                                <i class="pi pi-phone text-primary"></i> <span>{{
-                                                    selectedEntidad.telefono || '—' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Tutorial / Empty State cuando no hay seleccion -->
-                                    <div v-else
-                                        class="mt-2 p-5 rounded-xl bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700">
-                                        <div class="flex items-center gap-3 mb-3">
-                                            <i class="pi pi-info-circle text-primary text-xl"></i>
-                                            <span class="font-bold text-surface-900 dark:text-surface-0">¿Cómo
-                                                seleccionar al Cliente?</span>
-                                        </div>
-                                        <ul
-                                            class="text-sm text-surface-600 dark:text-surface-400 space-y-2 leading-relaxed ml-2">
-                                            <li>&bull; <strong class="text-surface-800 dark:text-surface-200">Persona
-                                                    Natural:</strong> Al seleccionar un
-                                                "Cliente", este se asignará automáticamente como el contacto principal.
-                                            </li>
-                                            <li>&bull; <strong
-                                                    class="text-surface-800 dark:text-surface-200">Instituciones:</strong>
-                                                Al seleccionar una
-                                                institución, aparecerá un segundo buscador para que asigne a la persona
-                                                de contacto.</li>
-                                            <li>&bull; Utilice el botón <strong class="text-primary">Nuevo</strong> si
-                                                el cliente no se encuentra registrado
-                                                en la base de datos.</li>
-                                        </ul>
+                                        <Button
+                                            icon="pi pi-times"
+                                            text
+                                            rounded
+                                            size="small"
+                                            severity="secondary"
+                                            aria-label="Cambiar cliente"
+                                            @click="deseleccionarEntidad"
+                                        />
                                     </div>
                                 </div>
 
-                                <!-- BLOQUE 2: Información Persona de Contacto (Visible SOLO si es Institución) -->
-                                <div class="flex flex-col gap-3 mt-4" v-if="selectedEntidad?.tipo === 'institucion'">
-                                    <label
-                                        class="font-bold text-surface-900 dark:text-surface-0 mb-1 lg:text-lg">Persona
-                                        de Contacto</label>
+                                <!-- BLOQUE 2: Persona de Contacto (Solo cuando es Institución) -->
+                                <div v-if="selectedEntidad?.tipo === 'institucion'" class="flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-sm font-bold text-surface-900 dark:text-surface-0">
+                                            Representante / Persona de Contacto <span class="text-red-500">*</span>
+                                        </label>
+                                        <span class="text-xs text-surface-500">
+                                            Vinculado a {{ selectedEntidad.nombre }}
+                                        </span>
+                                    </div>
 
-                                    <!-- Buscador Secundario (Dependiente de Institución) -->
                                     <div class="flex gap-2 items-start w-full">
-                                        <Select v-model="cotizacion.contacto_id" :options="personasOptions"
-                                            optionValue="id" filter placeholder="Seleccione un contacto vinculado"
-                                            class="flex-1" :disabled="!personasOptions.length">
+                                        <Select
+                                            v-model="cotizacion.contacto_id"
+                                            :options="personasOptions"
+                                            optionValue="id"
+                                            filter
+                                            placeholder="Seleccionar persona de contacto..."
+                                            class="flex-1"
+                                            :disabled="!personasOptions.length"
+                                        >
                                             <template #value="slotProps">
                                                 <div v-if="slotProps.value" class="flex items-center gap-2 font-medium">
-                                                    <i class="pi pi-user text-primary hidden sm:inline"></i>
-                                                    <span class="truncate">{{personasOptions.find(e => e.id ===
-                                                        slotProps.value)?.nombre}}</span>
+                                                    <i class="pi pi-user text-surface-500 text-xs"></i>
+                                                    <span class="truncate">
+                                                        {{ personasOptions.find(e => e.id === slotProps.value)?.nombre }}
+                                                    </span>
                                                 </div>
-                                                <span v-else-if="!personasOptions.length">No hay contactos
-                                                    registrados</span>
+                                                <span v-else-if="!personasOptions.length">Sin contactos registrados en esta institución</span>
                                                 <span v-else>{{ slotProps.placeholder }}</span>
                                             </template>
                                             <template #option="slotProps">
-                                                <div class="flex flex-col">
-                                                    <span
-                                                        class="text-[0.7rem] text-muted-color tracking-wider uppercase font-bold">{{
-                                                            slotProps.option.nit || 'S/N' }}</span>
-                                                    <span class="font-medium text-surface-900 dark:text-surface-0">{{
-                                                        slotProps.option.nombre }}</span>
+                                                <div class="flex items-center justify-between gap-3 w-full">
+                                                    <span class="font-medium text-surface-900 dark:text-surface-0 text-sm">
+                                                        {{ slotProps.option.nombre }}
+                                                    </span>
+                                                    <span class="text-xs text-surface-500 font-mono">
+                                                        {{ slotProps.option.nit || 'S/N' }}
+                                                    </span>
                                                 </div>
                                             </template>
                                         </Select>
-                                        <Button label="Nuevo" icon="pi pi-user-plus" severity="primary"
-                                            @click="openModalNuevoContacto" />
+                                        <Button
+                                            label="Agregar contacto"
+                                            icon="pi pi-plus"
+                                            severity="secondary"
+                                            outlined
+                                            @click="openModalNuevoContacto"
+                                        />
                                     </div>
 
-                                    <!-- Tarjeta Visual del Contacto Seleccionado -->
-                                    <div v-if="selectedContacto"
-                                        class="border border-surface shadow-sm rounded-xl p-5 bg-surface-0 dark:bg-surface-900 relative mt-2 transition-all">
-
-                                        <!-- Botones de Acción Agrupados en Top-Right (Editar y Cerrar) -->
-                                        <div class="absolute top-3 right-3 flex items-center">
-                                            <Button icon="pi pi-pencil" text rounded
-                                                class="w-8 h-8 !p-0 text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/40"
-                                                aria-label="Editar" />
-                                            <Button icon="pi pi-times" text rounded
-                                                class="w-8 h-8 !p-0 text-surface-400 hover:text-surface-800 dark:hover:text-surface-200"
-                                                aria-label="Remover" @click="deseleccionarContacto" />
-                                        </div>
-
-                                        <!-- Información Principal -->
-                                        <div class="flex items-center gap-4 mb-4 pr-16 text-balance">
-                                            <Avatar icon="pi pi-user" size="large" shape="circle"
-                                                class="bg-primary text-primary-contrast" />
-                                            <div class="flex flex-col">
-                                                <span
-                                                    class="font-bold text-lg text-surface-900 dark:text-surface-0 leading-tight">{{
-                                                        selectedContacto.nombre }}</span>
-                                                <span
-                                                    class="text-sm text-primary font-medium flex items-center gap-1 mt-1"><i
-                                                        class="pi pi-id-card text-xs"></i> {{ selectedContacto.nit ||
-                                                            'Sin CI/NIT' }}</span>
-                                                <span v-if="selectedContacto.isNew"
-                                                    class="text-[0.6rem] uppercase tracking-wider font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded inline-block w-max mt-2">En
-                                                    borrador</span>
+                                    <!-- Ficha compacta del contacto -->
+                                    <div
+                                        v-if="selectedContacto"
+                                        class="mt-1 border border-surface-200 dark:border-surface-700 rounded-lg p-3.5 bg-surface-50 dark:bg-surface-800/50 flex items-start justify-between gap-3"
+                                    >
+                                        <div class="flex flex-col gap-1 min-w-0">
+                                            <span class="font-bold text-sm text-surface-900 dark:text-surface-0">
+                                                {{ selectedContacto.nombre }}
+                                            </span>
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-600 dark:text-surface-400">
+                                                <span><strong>CI:</strong> {{ selectedContacto.nit || '—' }}</span>
+                                                <span><strong>Tel:</strong> {{ selectedContacto.telefono || '—' }}</span>
+                                                <span><strong>Correo:</strong> {{ selectedContacto.email || '—' }}</span>
                                             </div>
                                         </div>
 
-                                        <!-- Teléfonos / Emails del Contacto -->
-                                        <div
-                                            class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-surface-600 dark:text-surface-400 border-t border-surface pt-4">
-                                            <div
-                                                class="flex items-center gap-2 font-medium bg-surface-100 dark:bg-surface-800 p-2.5 rounded-lg">
-                                                <i class="pi pi-envelope text-primary"></i> <span class="truncate">{{
-                                                    selectedContacto.email || '—'
-                                                }}</span>
-                                            </div>
-                                            <div
-                                                class="flex items-center gap-2 font-medium bg-surface-100 dark:bg-surface-800 p-2.5 rounded-lg">
-                                                <i class="pi pi-phone text-primary"></i> <span>{{
-                                                    selectedContacto.telefono || '—' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- COLUMNA DERECHA: Fechas y Datos Adicionales del Evento -->
-                            <div class="col-span-12 lg:col-span-5 flex flex-col gap-5">
-                                <div
-                                    class="font-bold text-surface-900 dark:text-surface-0 mb-1 lg:text-lg border-b lg:border-none border-surface pb-3 lg:pb-0">
-                                    Detalles del Evento</div>
-
-                                <div class="flex flex-col gap-2">
-                                    <label for="tipo_evento" class="font-semibold text-sm">Tipo de Evento <span
-                                            class="text-red-500">*</span></label>
-                                    <Select id="tipo_evento" v-model="cotizacion.tipo_evento" :options="tiposEvento"
-                                        optionLabel="descripcion" optionValue="id" placeholder="Selecciona el tipo"
-                                        class="w-full" @change="onTipoEventoChange" />
-                                </div>
-
-                                <div class="flex flex-col gap-2">
-                                    <label for="fecha_inicio" class="font-semibold text-sm">Fecha de Inicio <span
-                                            class="text-red-500">*</span></label>
-                                    <DatePicker id="fecha_inicio" v-model="cotizacion.fecha_inicio" showIcon fluid
-                                        placeholder="dd/mm/aaaa" />
-                                </div>
-
-                                <div class="flex flex-col gap-2">
-                                    <label for="fecha_fin" class="font-semibold text-sm">Fecha de Fin</label>
-                                    <DatePicker id="fecha_fin" v-model="cotizacion.fecha_fin" showIcon fluid
-                                        placeholder="dd/mm/aaaa" :minDate="cotizacion.fecha_inicio" />
-                                </div>
-
-                                <div class="flex flex-col gap-2">
-                                    <label for="descripcion" class="font-semibold text-sm">Descripción del
-                                        Evento</label>
-                                    <Textarea id="descripcion" v-model="cotizacion.descripcion" rows="4" autoResize
-                                        placeholder="Describe brevemente de qué tratará el evento..."
-                                        class="bg-surface-50 dark:bg-surface-900 border-surface-200" />
-                                </div>
-
-                                <!-- Conteo Temporadas Display -->
-                                <div v-if="conteoTemporadas.total > 0"
-                                    class="mt-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 p-4 rounded-xl">
-                                    <h3
-                                        class="text-sm font-bold text-primary-900 dark:text-primary-100 mb-3 flex items-center gap-2">
-                                        <i class="pi pi-calendar"></i> Resumen de Temporadas ({{ conteoTemporadas.total
-                                        }} días)
-                                    </h3>
-                                    <div class="flex gap-4">
-                                        <div
-                                            class="flex-1 bg-surface-0 dark:bg-surface-900 p-3 rounded-lg border border-surface shadow-sm">
-                                            <div
-                                                class="text-muted-color text-xs uppercase tracking-wider font-bold mb-1">
-                                                Temporada Baja</div>
-                                            <div class="text-2xl font-black text-surface-900 dark:text-surface-0">{{
-                                                conteoTemporadas.baja.count }} <span
-                                                    class="text-sm font-normal text-muted-color">días</span></div>
-                                        </div>
-                                        <div
-                                            class="flex-1 bg-surface-0 dark:bg-surface-900 p-3 rounded-lg border border-surface shadow-sm relative overflow-hidden">
-                                            <div
-                                                class="absolute -right-4 -top-4 bg-orange-100 dark:bg-orange-900/40 w-16 h-16 rounded-full opacity-50">
-                                            </div>
-                                            <div
-                                                class="text-muted-color text-xs uppercase tracking-wider font-bold mb-1 relative z-10">
-                                                Temporada
-                                                Alta</div>
-                                            <div
-                                                class="text-2xl font-black text-surface-900 dark:text-surface-0 relative z-10">
-                                                {{
-                                                    conteoTemporadas.alta.count }} <span
-                                                    class="text-sm font-normal text-muted-color">días</span></div>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3 text-xs text-primary-700 dark:text-primary-300">
-                                        <i class="pi pi-info-circle mr-1"></i> Los precios de los espacios varían según
-                                        la temporada.
+                                        <Button
+                                            icon="pi pi-times"
+                                            text
+                                            rounded
+                                            size="small"
+                                            severity="secondary"
+                                            aria-label="Quitar contacto"
+                                            @click="deseleccionarContacto"
+                                        />
                                     </div>
                                 </div>
 
-                            </div>
+                                <!-- BLOQUE 3: Documentos Base del Expediente (Filas horizontales formales) -->
+                                <div class="pt-4 border-t border-surface-200 dark:border-surface-800 flex flex-col gap-3">
+                                    <div>
+                                        <span class="text-sm font-bold text-surface-900 dark:text-surface-0 block">
+                                            Documentos Base de Apertura (PDF)
+                                        </span>
+                                        <span class="text-xs text-surface-500">
+                                            Respaldos físicos digitalizados presentados por el cliente (máx. 10 MB por archivo).
+                                        </span>
+                                    </div>
 
-                            <!-- DOCUMENTOS BASE DEL EVENTO (PASO 1) -->
-                            <div class="col-span-12 mt-4 pt-6 border-t border-surface">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <i class="pi pi-folder-open text-primary text-xl"></i>
-                                    <span class="font-bold text-surface-900 dark:text-surface-0 text-base lg:text-lg">Documentos Base del Evento</span>
-                                    <span class="text-xs text-muted-color font-medium">(Adjuntos en formato PDF)</span>
-                                </div>
-                                <p class="text-xs text-surface-500 dark:text-surface-400 mb-4">
-                                    Adjunte los formularios físicos digitalizados que respaldan la apertura de esta cotización comercial.
-                                </p>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <!-- Tarjeta 1: Solicitud de Arrendamiento -->
-                                    <div class="border border-surface-200 dark:border-surface-700 rounded-xl p-4 bg-surface-50/50 dark:bg-surface-900/50 flex flex-col justify-between">
-                                        <div>
-                                            <div class="flex items-start justify-between gap-2 mb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-                                                        <i class="pi pi-file-edit text-base"></i>
+                                    <div class="divide-y divide-surface-200 dark:divide-surface-700 border border-surface-200 dark:border-surface-700 rounded-lg bg-white dark:bg-surface-900">
+                                        <!-- Fila 1: Solicitud de Arrendamiento -->
+                                        <div class="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div class="flex items-start gap-3 min-w-0">
+                                                <i class="pi pi-file-pdf text-lg mt-0.5" :class="archivoSolicitud ? 'text-red-600' : 'text-surface-400'"></i>
+                                                <div class="min-w-0">
+                                                    <div class="text-sm font-semibold text-surface-900 dark:text-surface-0">
+                                                        1. Solicitud de Arrendamiento
                                                     </div>
-                                                    <div>
-                                                        <span class="font-bold text-sm text-surface-900 dark:text-surface-0 block">Solicitud de Arrendamiento</span>
-                                                        <span class="text-[11px] text-muted-color">Descripción, fechas, espacios y servicios del cliente</span>
+                                                    <div v-if="archivoSolicitud" class="text-xs text-emerald-700 dark:text-emerald-400 font-medium truncate">
+                                                        {{ archivoSolicitud.name }} ({{ formatFileSize(archivoSolicitud.size) }})
+                                                    </div>
+                                                    <div v-else class="text-xs text-surface-500">
+                                                        Formulario de requerimiento de fechas, ambientes y servicios
                                                     </div>
                                                 </div>
-                                                <span v-if="archivoSolicitud" class="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                    <i class="pi pi-check text-[10px]"></i> Cargado
-                                                </span>
                                             </div>
 
-                                            <!-- Estado sin archivo -->
-                                            <div v-if="!archivoSolicitud" class="mt-3">
-                                                <label class="flex flex-col items-center justify-center border-2 border-dashed border-surface-300 dark:border-surface-600 rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-surface-0 dark:hover:bg-surface-800 transition-colors">
-                                                    <i class="pi pi-cloud-upload text-2xl text-muted-color mb-1"></i>
-                                                    <span class="text-xs font-semibold text-surface-700 dark:text-surface-200">Seleccionar Solicitud (PDF)</span>
-                                                    <span class="text-[10px] text-muted-color mt-0.5">Formato PDF hasta 10 MB</span>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-800 text-xs font-semibold text-surface-700 dark:text-surface-200 transition-colors">
+                                                    <i class="pi pi-upload text-xs"></i>
+                                                    <span>{{ archivoSolicitud ? 'Cambiar PDF' : 'Adjuntar PDF' }}</span>
                                                     <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onSolicitudSelected" />
                                                 </label>
-                                            </div>
-
-                                            <!-- Estado con archivo seleccionado -->
-                                            <div v-else class="mt-3 p-3 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-between gap-3">
-                                                <div class="flex items-center gap-2 min-w-0">
-                                                    <i class="pi pi-file-pdf text-red-500 text-xl flex-shrink-0"></i>
-                                                    <div class="min-w-0">
-                                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">{{ archivoSolicitud.name }}</p>
-                                                        <p class="text-[10px] text-muted-color m-0">{{ formatFileSize(archivoSolicitud.size) }}</p>
-                                                    </div>
-                                                </div>
-                                                <Button icon="pi pi-trash" text rounded severity="danger" size="small" @click="removeSolicitud" title="Quitar archivo" />
+                                                <Button
+                                                    v-if="archivoSolicitud"
+                                                    icon="pi pi-trash"
+                                                    text
+                                                    rounded
+                                                    severity="danger"
+                                                    size="small"
+                                                    @click="removeSolicitud"
+                                                />
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Tarjeta 2: Verificación de Habilitación -->
-                                    <div class="border border-surface-200 dark:border-surface-700 rounded-xl p-4 bg-surface-50/50 dark:bg-surface-900/50 flex flex-col justify-between">
-                                        <div>
-                                            <div class="flex items-start justify-between gap-2 mb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="w-9 h-9 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
-                                                        <i class="pi pi-shield text-base"></i>
+                                        <!-- Fila 2: Verificación de Habilitación -->
+                                        <div class="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div class="flex items-start gap-3 min-w-0">
+                                                <i class="pi pi-file-pdf text-lg mt-0.5" :class="archivoHabilitacion ? 'text-red-600' : 'text-surface-400'"></i>
+                                                <div class="min-w-0">
+                                                    <div class="text-sm font-semibold text-surface-900 dark:text-surface-0">
+                                                        2. Verificación de Habilitación
                                                     </div>
-                                                    <div>
-                                                        <span class="font-bold text-sm text-surface-900 dark:text-surface-0 block">Verificación de Habilitación</span>
-                                                        <span class="text-[11px] text-muted-color">Certificación de buen cliente / habilitado</span>
+                                                    <div v-if="archivoHabilitacion" class="text-xs text-emerald-700 dark:text-emerald-400 font-medium truncate">
+                                                        {{ archivoHabilitacion.name }} ({{ formatFileSize(archivoHabilitacion.size) }})
+                                                    </div>
+                                                    <div v-else class="text-xs text-surface-500">
+                                                        Certificación administrativa de cliente habilitado
                                                     </div>
                                                 </div>
-                                                <span v-if="archivoHabilitacion" class="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                    <i class="pi pi-check text-[10px]"></i> Cargado
-                                                </span>
                                             </div>
 
-                                            <!-- Estado sin archivo -->
-                                            <div v-if="!archivoHabilitacion" class="mt-3">
-                                                <label class="flex flex-col items-center justify-center border-2 border-dashed border-surface-300 dark:border-surface-600 rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-surface-0 dark:hover:bg-surface-800 transition-colors">
-                                                    <i class="pi pi-cloud-upload text-2xl text-muted-color mb-1"></i>
-                                                    <span class="text-xs font-semibold text-surface-700 dark:text-surface-200">Seleccionar Habilitación (PDF)</span>
-                                                    <span class="text-[10px] text-muted-color mt-0.5">Formato PDF hasta 10 MB</span>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-800 text-xs font-semibold text-surface-700 dark:text-surface-200 transition-colors">
+                                                    <i class="pi pi-upload text-xs"></i>
+                                                    <span>{{ archivoHabilitacion ? 'Cambiar PDF' : 'Adjuntar PDF' }}</span>
                                                     <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onHabilitacionSelected" />
                                                 </label>
-                                            </div>
-
-                                            <!-- Estado con archivo seleccionado -->
-                                            <div v-else class="mt-3 p-3 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg flex items-center justify-between gap-3">
-                                                <div class="flex items-center gap-2 min-w-0">
-                                                    <i class="pi pi-file-pdf text-red-500 text-xl flex-shrink-0"></i>
-                                                    <div class="min-w-0">
-                                                        <p class="text-xs font-bold text-surface-900 dark:text-surface-0 truncate m-0">{{ archivoHabilitacion.name }}</p>
-                                                        <p class="text-[10px] text-muted-color m-0">{{ formatFileSize(archivoHabilitacion.size) }}</p>
-                                                    </div>
-                                                </div>
-                                                <Button icon="pi pi-trash" text rounded severity="danger" size="small" @click="removeHabilitacion" title="Quitar archivo" />
+                                                <Button
+                                                    v-if="archivoHabilitacion"
+                                                    icon="pi pi-trash"
+                                                    text
+                                                    rounded
+                                                    severity="danger"
+                                                    size="small"
+                                                    @click="removeHabilitacion"
+                                                />
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- COLUMNA DERECHA: Parámetros del Evento -->
+                            <div class="col-span-12 lg:col-span-5 flex flex-col gap-4">
+                                <div class="text-sm font-bold text-surface-900 dark:text-surface-0">
+                                    Datos y Fechas del Evento
+                                </div>
+
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="tipo_evento" class="text-xs font-semibold text-surface-700 dark:text-surface-300">
+                                        Categoría de Evento <span class="text-red-500">*</span>
+                                    </label>
+                                    <Select
+                                        id="tipo_evento"
+                                        v-model="cotizacion.tipo_evento"
+                                        :options="tiposEvento"
+                                        optionLabel="descripcion"
+                                        optionValue="id"
+                                        placeholder="Seleccione la categoría..."
+                                        class="w-full"
+                                        @change="onTipoEventoChange"
+                                    />
+                                </div>
+
+                                <!-- Fechas Inicio y Fin lado a lado -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="flex flex-col gap-1.5">
+                                        <label for="fecha_inicio" class="text-xs font-semibold text-surface-700 dark:text-surface-300">
+                                            Fecha de Inicio <span class="text-red-500">*</span>
+                                        </label>
+                                        <DatePicker
+                                            id="fecha_inicio"
+                                            v-model="cotizacion.fecha_inicio"
+                                            showIcon
+                                            fluid
+                                            placeholder="dd/mm/aaaa"
+                                        />
+                                    </div>
+
+                                    <div class="flex flex-col gap-1.5">
+                                        <label for="fecha_fin" class="text-xs font-semibold text-surface-700 dark:text-surface-300">
+                                            Fecha de Conclusión
+                                        </label>
+                                        <DatePicker
+                                            id="fecha_fin"
+                                            v-model="cotizacion.fecha_fin"
+                                            showIcon
+                                            fluid
+                                            placeholder="dd/mm/aaaa"
+                                            :minDate="cotizacion.fecha_inicio"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- Resumen compacto de días por temporada -->
+                                <div
+                                    v-if="conteoTemporadas.total > 0"
+                                    class="p-3.5 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/50 flex items-center justify-between text-xs"
+                                >
+                                    <span class="font-semibold text-surface-700 dark:text-surface-200">
+                                        Duración total: {{ conteoTemporadas.total }} día(s)
+                                    </span>
+                                    <div class="flex items-center gap-3 text-surface-600 dark:text-surface-300">
+                                        <span>Baja: <strong>{{ conteoTemporadas.baja.count }}d</strong></span>
+                                        <span>·</span>
+                                        <span>Alta: <strong>{{ conteoTemporadas.alta.count }}d</strong></span>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="descripcion" class="text-xs font-semibold text-surface-700 dark:text-surface-300">
+                                        Nombre o Descripción del Evento <span class="text-red-500">*</span>
+                                    </label>
+                                    <Textarea
+                                        id="descripcion"
+                                        v-model="cotizacion.descripcion"
+                                        rows="4"
+                                        autoResize
+                                        placeholder="Ej. Feria Internacional del Libro de La Paz 2026..."
+                                        class="w-full"
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Controles Inferiores (Pasar al Siguiente Paso) -->
-                        <div class="flex pt-6 justify-end border-t border-surface mt-2">
-                            <Button label="Seleccionar Espacios" icon="pi pi-arrow-right" iconPos="right"
-                                :disabled="!isStep1Valid" @click="activateCallback(1)" class="w-full sm:w-auto" />
+                        <!-- Pie de navegación -->
+                        <div class="flex pt-4 justify-end border-t border-surface-200 dark:border-surface-800">
+                            <Button
+                                label="Continuar a Espacios"
+                                icon="pi pi-arrow-right"
+                                iconPos="right"
+                                :disabled="!isStep1Valid"
+                                @click="activateCallback(2)"
+                            />
                         </div>
                     </div>
                 </StepPanel>
@@ -413,7 +382,7 @@
                 <!-- ============================================== -->
                 <!-- PASO 2: ESPACIOS (Reservado para siguiente fase) -->
                 <!-- ============================================== -->
-                <StepPanel :value="1" v-slot="{ activateCallback }">
+                <StepPanel :value="2" v-slot="{ activateCallback }">
                     <div class="flex flex-col gap-5">
                         <!-- FILTROS -->
                         <div class="flex flex-wrap gap-4 items-center">
@@ -588,16 +557,16 @@
                             </div>
 
                             <div class="flex gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                                <Button label="Volver" severity="secondary" @click="activateCallback(0)" />
+                                <Button label="Volver" severity="secondary" @click="activateCallback(1)" />
                                 <Button label="Servicios" icon="pi pi-arrow-right" iconPos="right" severity="primary"
-                                    @click="activateCallback(2)" />
+                                    @click="activateCallback(3)" />
                             </div>
                         </div>
 
                         <div class="flex pt-4" v-if="cotizacion.espacios.length === 0">
                             <Button label="Volver" severity="secondary" icon="pi pi-arrow-left"
-                                @click="activateCallback(0)" />
-                            <Button label="Omitir Espacios" severity="secondary" text @click="activateCallback(2)"
+                                @click="activateCallback(1)" />
+                            <Button label="Omitir Espacios" severity="secondary" text @click="activateCallback(3)"
                                 class="ml-auto" />
                         </div>
                     </div>
@@ -606,7 +575,7 @@
                 <!-- ============================================== -->
                 <!-- PASOS 3 Y 4: SERVICIOS Y RESUMEN               -->
                 <!-- ============================================== -->
-                <StepPanel :value="2" v-slot="{ activateCallback }">
+                <StepPanel :value="3" v-slot="{ activateCallback }">
                     <div class="flex flex-col gap-4">
                         <!-- Cabecera de servicios -->
                         <div class="flex items-center justify-between mb-2">
@@ -720,22 +689,22 @@
                             </div>
                             <div class="flex gap-2">
                                 <Button label="Volver" severity="secondary" text class="!text-surface-400"
-                                    @click="activateCallback(1)" />
+                                    @click="activateCallback(2)" />
                                 <Button label="Ver Resumen" severity="primary" class="!px-6 !py-3 !font-bold"
-                                    @click="activateCallback(3)" />
+                                    @click="activateCallback(4)" />
                             </div>
                         </div>
 
                         <!-- Navegación básica si no hay nada seleccionado -->
                         <div class="flex pt-4 justify-between" v-if="cotizacion.servicios.length === 0">
                             <Button label="Volver" severity="secondary" icon="pi pi-arrow-left"
-                                @click="activateCallback(1)" />
-                            <Button label="Siguiente" variant="text" @click="activateCallback(3)" />
+                                @click="activateCallback(2)" />
+                            <Button label="Siguiente" variant="text" @click="activateCallback(4)" />
                         </div>
                     </div>
                 </StepPanel>
 
-                <StepPanel :value="3" v-slot="{ activateCallback }">
+                <StepPanel :value="4" v-slot="{ activateCallback }">
                     <div
                         class="flex flex-col bg-white dark:bg-surface-900 rounded-3xl shadow-2xl overflow-hidden border border-surface-200 dark:border-surface-800">
                         <!-- HEADER PREMIUM (Dark Green) - BALANCED & READABLE -->
@@ -898,7 +867,7 @@
                         <!-- BARRA DE ACCIONES DE DISEÑO -->
                         <div
                             class="flex justify-between items-center px-6 py-3 bg-surface-100 dark:bg-surface-800/80 border-t border-surface-200 dark:border-surface-700">
-                            <Button label="Editar" icon="pi pi-pencil" severity="secondary" @click="activateCallback(2)"
+                            <Button label="Editar" icon="pi pi-pencil" severity="secondary" @click="activateCallback(3)"
                                 outlined class="!py-1.5 !px-4 text-xs" />
 
                             <div class="flex gap-2">
@@ -1158,8 +1127,8 @@ const { countryCodes, defaultCode, buildWhatsAppUrl } = useCountryCodes();
 // ============================================================================
 // ESTADO GENERAL DEL WIZARD
 // ============================================================================
-// activeStep  maneja qué panel del Stepper está visible (0=Datos, 1=Espacios, etc.)
-const activeStep = ref(0);
+// activeStep maneja qué panel del Stepper está visible (1=Datos, 2=Espacios, 3=Servicios, 4=Resumen)
+const activeStep = ref(1);
 const showPdfPreview = ref(false);
 const pdfUrl = ref(null);
 

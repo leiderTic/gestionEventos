@@ -1,7 +1,6 @@
 import AppLayout from '../layout/AppLayout.vue'
 import { createRouter, createWebHistory } from 'vue-router';
 import Login from '../views/auth/Login.vue'
-import Inicio from '../views/web/Inicio.vue'
 import Dashboard from '../views/admin/dashboard/Dashboard.vue'
 import NotFound from '../views/errors/NotFound.vue'
 import CotizacionNuevo from '@/views/admin/cotizacion/CotizacionNuevo.vue';
@@ -14,11 +13,7 @@ import { useAuthStore } from '@/stores/auth';
 const routes = [
     {
         path: '/',
-        name: 'inicio',
-        component: Inicio,
-        meta: {
-            requiresIfAuth: true
-        }
+        redirect: { name: 'login' }
     },
     {
         path: '/login',
@@ -49,9 +44,21 @@ const routes = [
                 }
             },
             {
+                path: 'cotizacion/mias',
+                name: 'misCotizaciones',
+                component: Cotizacion,
+                meta: {
+                    scope: 'propias',
+                    permission: ['cotizaciones.ver_propias', 'cotizaciones.crear']
+                }
+            },
+            {
                 path: 'cotizacion',
                 name: 'cotizacion',
-                component: Cotizacion
+                component: Cotizacion,
+                meta: {
+                    scope: 'bandeja'
+                }
             },
             {
                 path: 'cotizacion/:id',

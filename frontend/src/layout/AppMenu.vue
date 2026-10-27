@@ -8,39 +8,51 @@ const authStore = useAuthStore();
 const model = computed(() => {
     const sections = [];
 
-    // Sección Comercial / Cotizaciones
-    const comercialItems = [
+    // 1. Seguimiento y Control (Dashboard + Bandeja Institucional para Admin / UAF / Legal)
+    const seguimientoItems = [
         { label: 'Dashboard', icon: 'pi pi-fw pi-chart-bar', to: '/admin/dashboard' }
     ];
 
+    if (authStore.can(['cotizaciones.ver_todas', 'uaf.ver_con_boucher', 'legal.ver_pagadas'])) {
+        seguimientoItems.push({
+            label: 'Control de Cotizaciones',
+            icon: 'pi pi-fw pi-inbox',
+            to: '/admin/cotizacion'
+        });
+    }
+
+    sections.push({
+        label: 'SEGUIMIENTO Y CONTROL',
+        items: seguimientoItems
+    });
+
+    // 2. Área Comercial (Cartera propia del Ejecutivo Comercial)
+    const comercialItems = [];
+
     if (authStore.can('cotizaciones.crear')) {
-        comercialItems.push({ label: 'Nueva Cotización', icon: 'pi pi-fw pi-plus-circle', to: '/admin/cotizacion/nueva' });
+        comercialItems.push({
+            label: 'Nueva Cotización',
+            icon: 'pi pi-fw pi-plus-circle',
+            to: '/admin/cotizacion/nueva'
+        });
     }
 
-    if (authStore.can(['cotizaciones.ver_todas', 'cotizaciones.ver_propias', 'uaf.ver_con_boucher', 'legal.ver_pagadas'])) {
-        comercialItems.push({ label: 'Cotizaciones', icon: 'pi pi-fw pi-file', to: '/admin/cotizacion' });
-    }
-
-    if (authStore.can('cotizaciones.editar')) {
-        comercialItems.push({ label: 'CRM Comercial', icon: 'pi pi-fw pi-comments', to: '/admin/crm' });
+    if (authStore.can(['cotizaciones.ver_propias', 'cotizaciones.crear'])) {
+        comercialItems.push({
+            label: 'Mis Cotizaciones',
+            icon: 'pi pi-fw pi-file',
+            to: '/admin/cotizacion/mias'
+        });
     }
 
     if (comercialItems.length > 0) {
         sections.push({
-            label: 'GESTIÓN COMERCIAL',
+            label: 'ÁREA COMERCIAL',
             items: comercialItems
         });
     }
 
-    // Sección Operaciones
-    sections.push({
-        label: 'OPERACIONES',
-        items: [
-            { label: 'Calendario de Eventos', icon: 'pi pi-fw pi-calendar', to: '/admin/calendario' }
-        ]
-    });
-
-    // Sección Administración & Análisis
+    // 3. Administración (Catálogos y Usuarios)
     const adminItems = [];
     if (authStore.can('catalogos.gestionar')) {
         adminItems.push({ label: 'Espacios y Tarifas', icon: 'pi pi-fw pi-building', to: '/admin/espacios' });
@@ -48,13 +60,13 @@ const model = computed(() => {
     if (authStore.can('usuarios.gestionar')) {
         adminItems.push({ label: 'Usuarios y Roles', icon: 'pi pi-fw pi-users', to: '/admin/usuarios' });
     }
-    adminItems.push({ label: 'Reportes', icon: 'pi pi-fw pi-chart-line', to: '/admin/reportes' });
-    adminItems.push({ label: 'Sanciones', icon: 'pi pi-fw pi-exclamation-triangle', to: '/admin/sanciones' });
 
-    sections.push({
-        label: 'ADMINISTRACIÓN Y ANÁLISIS',
-        items: adminItems
-    });
+    if (adminItems.length > 0) {
+        sections.push({
+            label: 'ADMINISTRACIÓN',
+            items: adminItems
+        });
+    }
 
     return sections;
 });

@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Eventos y Espacios
     Route::apiResource('eventos', EventoController::class);
     Route::apiResource('temporadas', TemporadaController::class);
+    Route::put('espacios/{id}/tarifas', [EspacioController::class, 'actualizarTarifas']);
     Route::apiResource('espacios', EspacioController::class);
     Route::apiResource('bloques', BloqueController::class);
     Route::apiResource('tipo-espacios', TipoEspacioController::class);

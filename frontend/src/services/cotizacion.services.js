@@ -1,8 +1,8 @@
 import { Api } from './ApiService';
 
 export default {
-    listar: () => {
-        return Api().get('cotizaciones');
+    listar: (params = {}) => {
+        return Api().get('cotizaciones', { params });
     },
     mostrar: (id) => {
         return Api().get(`cotizaciones/${id}`);
